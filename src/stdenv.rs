@@ -146,7 +146,7 @@ fn add(lisp: &mut Lisp, arg: Object) -> Object {
     }
 }
 
-// Set var
+// Set variable
 fn set(lisp: &mut Lisp, arg: Object) -> Object {
     let (symbol, data) = match arg {
         Object::Pair(a, b) => {
