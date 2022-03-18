@@ -22,7 +22,9 @@ impl Lisp {
         self.add_func("/", divide);
 
         #[cfg(debug_assertions)]
-        self.add_func("internal", internal)
+        self.add_func("internal", internal);
+
+        self
     }
 }
 
