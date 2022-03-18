@@ -21,15 +21,13 @@ impl Lisp {
     pub fn add_func(&mut self, name: &str, func: fn (&mut Self, Object) -> Object) -> &mut Self {
         self.add_var(name, Object::RustFunc(func))
     } 
-
-    pub fn eval(&mut self, input: &str) -> Object {
-        let object = Object::eval(input); // Evaluate tokens into objects
-
-        self.eval_object(object)
-    }
    
     fn eval_symbol(&mut self, symbol: &str) -> &Object {
-        self.variables.get(symbol).unwrap_or_else(|| panic!("Undefined variable '{}'", symbol))
+        if symbol.len() > 0 {
+            self.variables.get(symbol).unwrap_or_else(|| panic!("Undefined variable '{}'", symbol))
+        } else {
+            &Object::Nil
+        }
     }
 
     pub fn set_var(&mut self, symbol: &str, data: Object) {
@@ -51,5 +49,21 @@ impl Lisp {
             Object::Symbol(s) => self.eval_symbol(&s).clone(),
             a => a,
         }
+    }
+    
+    pub fn eval_objects(&mut self, objects: Vec<Object>) -> Object {
+        let mut ret = Object::Nil;
+
+        for o in objects {
+            ret = self.eval_object(o)
+        }
+
+        ret
+    }
+
+    pub fn eval(&mut self, input: &str) -> Object {
+        let objects = Object::eval(input); // Evaluate tokens into objects
+
+        self.eval_objects(objects)
     }
 }

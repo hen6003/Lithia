@@ -15,7 +15,7 @@ impl Object {
     fn parse_atom(string: &str) -> Self {
         if let Ok(i) = str::parse::<f32>(string) {
             Self::Number(i)
-        } else if string.len() == 2 || string.starts_with('\\') {
+        } else if string.len() == 2 && string.starts_with('\\') {
             Self::Character(string.chars().nth(1).unwrap())
         } else if !string.is_empty() {
             Self::Symbol(string.to_string())
@@ -111,17 +111,21 @@ impl Object {
         }
     }
 
-    fn eval_strings(strings: Vec<String>) -> Self {
+    fn eval_strings(strings: Vec<String>) -> Vec<Self> {
         let mut iter = strings.into_iter();
+        let mut ret = Vec::new();
 
-        match iter.next() {
-            Some(s) => match s.as_str() {
-                "(" => Self::iter_to_objects(&mut iter),
-                ")" => panic!("Unmatched ')'"),
-                s => Object::parse_atom(s),
-            },
+        loop {
+            match iter.next() {
+                Some(s) => ret.push(match s.as_str() {
+                    "(" => Self::iter_to_objects(&mut iter),
+                    ")" => panic!("Unmatched ')'"),
+                    "." => panic!("Invalid '.'"),
+                    s => Object::parse_atom(s),
+                }),
 
-            None => Object::Symbol(String::new())
+                None => break ret,
+            }
         }
     }
 
@@ -141,7 +145,7 @@ impl Object {
             .collect()
     }
 
-    pub fn eval(input: &str) -> Self {
+    pub fn eval(input: &str) -> Vec<Self> {
         let strings = Self::split_into_strings(input);
         Self::eval_strings(strings)
     }

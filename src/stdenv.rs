@@ -283,7 +283,14 @@ fn read(lisp: &mut Lisp, arg: Object) -> Object {
     stdout.flush().unwrap();
     
     stdin.read_line(&mut input).unwrap();
-    Object::eval(&input)
+    let objects = Object::eval(&input);
+
+    // Read cannot return multiple objects, even if multiple objects were evaluated
+    if objects.len() > 0 {
+        objects[0].clone()
+    } else {
+        Object::Nil
+    }
 }
 
 // Display internal version of an object
