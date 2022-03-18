@@ -2,6 +2,7 @@ use std::io;
 use std::io::prelude::*;
 
 mod lisp;
+mod object;
 
 fn print_prompt() {
     print!("> ");
