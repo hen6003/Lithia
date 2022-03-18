@@ -10,6 +10,10 @@ impl Lisp {
         self.add_func("quote", quote);
         self.add_func("exit", exit);
         self.add_func("set", set);
+        self.add_func("eval", eval);
+        self.add_func("loop", lisploop);
+        self.add_func("print", print);
+        self.add_func("read", read);
 
         // Math functions
         self.add_func("+", add);
@@ -171,9 +175,49 @@ fn set(lisp: &mut Lisp, arg: Object) -> Object {
     Object::Nil
 }
 
+// Evaluate an object and what it returns
+fn eval(lisp: &mut Lisp, arg: Object) -> Object {
+    let object = match arg {
+        Object::Pair(a, b) => {
+            if *b != Object::Nil {
+                panic!("eval doesn't accept multiple arguments")
+            }
+            lisp.eval_object(*a)
+        },
+        _ => panic!("eval doesn't accept dotted arguments"),
+    };
+
+    lisp.eval_object(object)
+}
+
+// Evaluates the given object forever
+fn lisploop(lisp: &mut Lisp, arg: Object) -> Object {
+    let object = match arg {
+        Object::Pair(a, b) => {
+            if *b != Object::Nil {
+                panic!("loop doesn't accept multiple arguments")
+            }
+            a
+        },
+        _ => panic!("loop doesn't accept dotted arguments"),
+    };
+
+    loop {
+        lisp.eval_object(*object.clone());
+    }
+}
+
 // Returns whatever its given, used for when you don't want to evaluate something
 fn quote(_: &mut Lisp, arg: Object) -> Object {
-    arg
+    match arg {
+        Object::Pair(a, b) => {
+            if *b != Object::Nil {
+                panic!("quote doesn't accept multiple arguments")
+            }
+            *a
+        },
+        _ => panic!("quote doesn't accept dotted arguments"),
+    }
 }
 
 // Exit lisp interpreter, number may be provided for exit code
@@ -194,6 +238,52 @@ fn exit(lisp: &mut Lisp, arg: Object) -> Object {
     };
 
     std::process::exit(exit_code as i32);
+}
+
+// Display an object
+fn print(lisp: &mut Lisp, arg: Object) -> Object {
+    let a = match arg {
+        Object::Pair(a, b) => {
+            if *b != Object::Nil {
+                panic!("print doesn't accept multiple arguments")
+            }
+            lisp.eval_object(*a)
+        },
+        _ => panic!("print doesn't accept dotted arguments"),
+    };
+
+    println!("{}", a);
+
+    Object::Nil
+}
+
+// Reads a line into objects
+fn read(lisp: &mut Lisp, arg: Object) -> Object {
+    use std::io::{stdin, stdout, Write};
+
+    let c = match arg {
+        Object::Pair(a, b) => {
+            if *b != Object::Nil {
+                panic!("read doesn't accept multiple arguments")
+            }
+            match lisp.eval_object(*a) {
+                Object::Character(c) => c,
+                _ => panic!("read doesn't accept non-characters")
+            }
+        },
+        Object::Nil => '>',
+        _ => panic!("read doesn't accept dotted arguments"),
+    };
+
+    let stdin = stdin();
+    let mut stdout = stdout();
+    let mut input = String::new();
+
+    print!("{} ", c);
+    stdout.flush().unwrap();
+    
+    stdin.read_line(&mut input).unwrap();
+    Object::eval(&input)
 }
 
 // Display internal version of an object

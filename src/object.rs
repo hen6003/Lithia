@@ -1,3 +1,4 @@
+use regex::Regex;
 use crate::Lisp;
 
 #[derive(Clone)]
@@ -110,7 +111,7 @@ impl Object {
         }
     }
 
-    pub fn eval(strings: Vec<String>) -> Self {
+    fn eval_strings(strings: Vec<String>) -> Self {
         let mut iter = strings.into_iter();
 
         match iter.next() {
@@ -122,6 +123,27 @@ impl Object {
 
             None => Object::Symbol(String::new())
         }
+    }
+
+    fn split_into_strings(input: &str) -> Vec<String> {
+        let regex = Regex::new(r"(?m)\(|\)|[^\s()]*").unwrap();
+ 
+        regex.captures_iter(input)
+            .filter_map(|x| {
+                let s = x.get(0).unwrap().as_str().to_string();
+
+                if s.is_empty() {
+                    None
+                } else {
+                    Some(s)
+                }
+            })
+            .collect()
+    }
+
+    pub fn eval(input: &str) -> Self {
+        let strings = Self::split_into_strings(input);
+        Self::eval_strings(strings)
     }
 }
 

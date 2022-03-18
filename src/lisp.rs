@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use regex::Regex;
 
 use crate::object::Object;
 
@@ -22,22 +21,6 @@ impl Lisp {
         self.add_var(name, Object::RustFunc(func));
     } 
    
-    fn split_into_strings(input: &str) -> Vec<String> {
-        let regex = Regex::new(r"(?m)\(|\)|[^\s()]*").unwrap();
- 
-        regex.captures_iter(input)
-            .filter_map(|x| {
-                let s = x.get(0).unwrap().as_str().to_string();
-
-                if s.is_empty() {
-                    None
-                } else {
-                    Some(s)
-                }
-            })
-            .collect()
-    }
-
     fn eval_symbol(&mut self, symbol: &str) -> &Object {
         self.variables.get(symbol).unwrap_or_else(|| panic!("Undefined variable '{}'", symbol))
     }
@@ -63,10 +46,9 @@ impl Lisp {
         }
     }
 
-    pub fn eval(&mut self, input: &str) -> String {
-        let strings = Self::split_into_strings(input); // Split code into seperate tokens
-        let object = Object::eval(strings); // Evaluate tokens into objects
+    pub fn eval(&mut self, input: &str) -> Object {
+        let object = Object::eval(input); // Evaluate tokens into objects
 
-        format!("{}", self.eval_object(object))
+        self.eval_object(object)
     }
 }
