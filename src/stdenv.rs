@@ -23,7 +23,7 @@ fn divide(lisp: &mut Lisp, arg: Object) -> Object {
     let mut cur_object: Object = match arg {
         Object::Pair(a, b) => {
             sum = match lisp.eval_object(*a) {
-                Object::Integer(i) => i,
+                Object::Number(i) => i,
                 _ => panic!("/ requires integer arguments")
             };
 
@@ -36,13 +36,13 @@ fn divide(lisp: &mut Lisp, arg: Object) -> Object {
         match cur_object {
             Object::Pair(a, b) => {
                 sum /= match lisp.eval_object(*a) {
-                    Object::Integer(i) => i,
+                    Object::Number(i) => i,
                     _ => panic!("/ requires integer arguments")
                 };
 
                 cur_object = *b
             },
-            Object::Nil => break Object::Integer(sum),
+            Object::Nil => break Object::Number(sum),
             _ => panic!("/ doesn't accept dotted arguments"),
         }
     }
@@ -53,7 +53,7 @@ fn times(lisp: &mut Lisp, arg: Object) -> Object {
     let mut cur_object: Object = match arg {
         Object::Pair(a, b) => {
             sum = match lisp.eval_object(*a) {
-                Object::Integer(i) => i,
+                Object::Number(i) => i,
                 _ => panic!("* requires integer arguments")
             };
 
@@ -66,13 +66,13 @@ fn times(lisp: &mut Lisp, arg: Object) -> Object {
         match cur_object {
             Object::Pair(a, b) => {
                 sum *= match lisp.eval_object(*a) {
-                    Object::Integer(i) => i,
+                    Object::Number(i) => i,
                     _ => panic!("* requires integer arguments")
                 };
 
                 cur_object = *b
             },
-            Object::Nil => break Object::Integer(sum),
+            Object::Nil => break Object::Number(sum),
             _ => panic!("* doesn't accept dotted arguments"),
         }
     }
@@ -83,7 +83,7 @@ fn minus(lisp: &mut Lisp, arg: Object) -> Object {
     let mut cur_object: Object = match arg {
         Object::Pair(a, b) => {
             sum = match lisp.eval_object(*a) {
-                Object::Integer(i) => i,
+                Object::Number(i) => i,
                 _ => panic!("- requires integer arguments")
             };
 
@@ -96,13 +96,13 @@ fn minus(lisp: &mut Lisp, arg: Object) -> Object {
         match cur_object {
             Object::Pair(a, b) => {
                 sum -= match lisp.eval_object(*a) {
-                    Object::Integer(i) => i,
+                    Object::Number(i) => i,
                     _ => panic!("- requires integer arguments")
                 };
 
                 cur_object = *b
             },
-            Object::Nil => break Object::Integer(sum),
+            Object::Nil => break Object::Number(sum),
             _ => panic!("- doesn't accept dotted arguments"),
         }
     }
@@ -113,7 +113,7 @@ fn add(lisp: &mut Lisp, arg: Object) -> Object {
     let mut cur_object: Object = match arg {
         Object::Pair(a, b) => {
             sum = match lisp.eval_object(*a) {
-                Object::Integer(i) => i,
+                Object::Number(i) => i,
                 _ => panic!("+ requires integer arguments")
             };
 
@@ -126,13 +126,13 @@ fn add(lisp: &mut Lisp, arg: Object) -> Object {
         match cur_object {
             Object::Pair(a, b) => {
                 sum += match lisp.eval_object(*a) {
-                    Object::Integer(i) => i,
+                    Object::Number(i) => i,
                     _ => panic!("+ requires integer arguments")
                 };
 
                 cur_object = *b
             },
-            Object::Nil => break Object::Integer(sum),
+            Object::Nil => break Object::Number(sum),
             _ => panic!("+ doesn't accept dotted arguments"),
         }
     }

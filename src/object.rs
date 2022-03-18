@@ -5,15 +5,15 @@ pub enum Object {
     Nil,
     Pair(Box<Object>, Box<Object>),
     Symbol(String),
-    Integer(i32),
+    Number(f32),
     Character(char),
     RustFunc(fn (&mut Lisp, Object) -> Object),
 }
 
 impl Object {
     fn parse_atom(string: &str) -> Self {
-        if let Ok(i) = str::parse::<i32>(string) {
-            Self::Integer(i)
+        if let Ok(i) = str::parse::<f32>(string) {
+            Self::Number(i)
         } else if string.len() == 2 || string.starts_with('\\') {
             Self::Character(string.chars().nth(1).unwrap())
         } else if !string.is_empty() {
@@ -139,7 +139,7 @@ impl fmt::Debug for Object {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Pair(a, b) => write!(f, "({:?} . {:?})", a, b),
-            Self::Integer(i) => write!(f, "{}", i),
+            Self::Number(i) => write!(f, "{}", i),
             Self::Character(c) => write!(f, "\'{}\'", c),
             Self::Symbol(s) => write!(f, "{}", s),
             Self::RustFunc(x) => write!(f, "{:p}", x),
@@ -157,8 +157,8 @@ impl PartialEq for Object {
                 },
                 _ => false,
             },
-            Self::Integer(i) => match other {
-                Self::Integer(o) => {
+            Self::Number(i) => match other {
+                Self::Number(o) => {
                     i == o
                 },
                 _ => false,
