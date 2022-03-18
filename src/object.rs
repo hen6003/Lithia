@@ -1,11 +1,13 @@
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+use crate::Lisp;
+
+#[derive(Clone)]
 pub enum Object {
     Nil,
     Pair(Box<Object>, Box<Object>),
     Symbol(String),
     Integer(i32),
     Character(char),
-    RustFunc(fn (Object) -> Object),
+    RustFunc(fn (&mut Lisp, Object) -> Object),
 }
 
 impl Object {
@@ -127,12 +129,54 @@ use std::fmt;
 impl fmt::Display for Object {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Pair(_,_) => write!(f, "Not implemented"), //TODO print pairs
+            Self::Nil => write!(f, ""), // If Nil on its own, don't display anything
+            a => write!(f, "{:?}", a),
+        }
+    }
+}
+
+impl fmt::Debug for Object {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Pair(a, b) => write!(f, "({:?} . {:?})", a, b),
             Self::Integer(i) => write!(f, "{}", i),
             Self::Character(c) => write!(f, "\'{}\'", c),
             Self::Symbol(s) => write!(f, "{}", s),
             Self::RustFunc(x) => write!(f, "{:p}", x),
-            Self::Nil => write!(f, ""),
+            Self::Nil => write!(f, "()"),
+        }
+    }
+}
+
+impl PartialEq for Object {
+    fn eq(&self, other: &Self) -> bool {
+        match self {
+            Self::Pair(a, b) => match other {
+                Self::Pair(c, d) => {
+                    a == c && b == d
+                },
+                _ => false,
+            },
+            Self::Integer(i) => match other {
+                Self::Integer(o) => {
+                    i == o
+                },
+                _ => false,
+            },
+            Self::Character(c) => match other {
+                Self::Character(o) => {
+                    c == o
+                },
+                _ => false,
+            },
+            Self::Symbol(s) => match other {
+                Self::Symbol(o) => {
+                    s == o
+                },
+                _ => false,
+            },
+            Self::RustFunc(_) => false,
+            Self::Nil => matches!(other, Self::Nil),
         }
     }
 }

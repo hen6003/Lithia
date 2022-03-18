@@ -18,7 +18,7 @@ impl Lisp {
         self.variables.insert(name.to_string(), object);
     }
     
-    pub fn add_func(&mut self, name: &str, func: fn (Object) -> Object) {
+    pub fn add_func(&mut self, name: &str, func: fn (&mut Self, Object) -> Object) {
         self.add_var(name, Object::RustFunc(func));
     } 
    
@@ -42,6 +42,22 @@ impl Lisp {
         self.variables.get_mut(symbol).unwrap_or_else(|| panic!("Undefined variable '{}'", symbol))
     }
 
+    pub fn eval_object(&mut self, object: Object) -> Object {
+        match object {
+            Object::Pair(f, a) => { // Execute function
+                if let Object::Symbol(s) = *f {
+                    match self.eval_symbol(&s) {
+                        Object::RustFunc(f) => f(self, *a),
+                        _ => panic!("Symbol was not a function")
+                    }
+                } else {
+                    panic!("Expected symbol for function name")
+                }
+            },
+            a => a,
+        }
+    }
+
     pub fn eval(&mut self, input: &str) -> String {
         let strings = Self::split_into_strings(input); // Split code into seperate tokens
         let object = Object::eval(strings); // Evaluate tokens into objects
@@ -50,7 +66,7 @@ impl Lisp {
             Object::Pair(f, a) => { // Execute function
                 if let Object::Symbol(s) = *f {
                     match self.eval_symbol(&s) {
-                        Object::RustFunc(f) => f(*a).to_string(),
+                        Object::RustFunc(f) => f(self, *a).to_string(),
                         _ => panic!("Symbol was not a function")
                     }
                 } else {
