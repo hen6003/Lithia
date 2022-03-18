@@ -1,8 +1,9 @@
-use std::io;
-use std::io::prelude::*;
-
 mod lisp;
 mod object;
+
+use std::io;
+use std::io::prelude::*;
+use lisp::Lisp;
 
 fn print_prompt() {
     print!("> ");
@@ -11,7 +12,7 @@ fn print_prompt() {
 
 fn main() {
     let stdin = io::stdin();
-    let mut lisp = lisp::Lisp::new();
+    let mut lisp = Lisp::new();
 
     print_prompt();
     for line in stdin.lock().lines() {

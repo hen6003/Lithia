@@ -5,6 +5,7 @@ pub enum Object {
     Symbol(String),
     Integer(i32),
     Character(char),
+    RustFunc(fn (Object) -> Object),
 }
 
 impl Object {
@@ -29,13 +30,7 @@ impl Object {
         loop {
             match cur_object {
                 Self::Pair(_, b) => cur_object = b,
-                Self::Symbol(s) => {
-                    if s == "nil" {
-                        break 
-                    } else {
-                        panic!("Not a list")
-                    }
-                },
+                Self::Nil => break,
                 _ => panic!("Not a list"),
             }
         }
@@ -113,8 +108,6 @@ impl Object {
         }
     }
 
-
-
     pub fn eval(strings: Vec<String>) -> Self {
         let mut iter = strings.into_iter();
 
@@ -138,7 +131,8 @@ impl fmt::Display for Object {
             Self::Integer(i) => write!(f, "{}", i),
             Self::Character(c) => write!(f, "\'{}\'", c),
             Self::Symbol(s) => write!(f, "{}", s),
-            Self::Nil => write!(f, "()"),
+            Self::RustFunc(x) => write!(f, "{:p}", x),
+            Self::Nil => write!(f, ""),
         }
     }
 }
