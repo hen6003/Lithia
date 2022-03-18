@@ -9,21 +9,18 @@ pub struct Lisp {
 
 impl Lisp {
     pub fn new() -> Self {
-        let mut variables = HashMap::new();
-
-        variables.insert("nil".to_string(), Object::Nil);
-        
-        #[cfg(debug_assertions)]
-        variables.insert("internal".to_string(), Object::RustFunc(internal));
-
         Self {
-            variables
+            variables: HashMap::new(),
         }
     }
 
-    pub fn add_func(&mut self, name: &str, func: fn (Object) -> Object) {
-        self.variables.insert(name.to_string(), Object::RustFunc(func));
+    pub fn add_var(&mut self, name: &str, object: Object) {
+        self.variables.insert(name.to_string(), object);
     }
+    
+    pub fn add_func(&mut self, name: &str, func: fn (Object) -> Object) {
+        self.add_var(name, Object::RustFunc(func));
+    } 
    
     fn split_into_strings(input: &str) -> Vec<String> {
         let regex = Regex::new(r"(?m)\(|\)|[^\s()]*").unwrap();
@@ -53,20 +50,7 @@ impl Lisp {
             Object::Pair(f, a) => { // Execute function
                 if let Object::Symbol(s) = *f {
                     match self.eval_symbol(&s) {
-                        Object::RustFunc(f) => {
-                            let a = match *a {
-                                Object::Pair(a, n) => {
-                                    if *n == Object::Nil {
-                                        a
-                                    } else {
-                                        panic!("Arguments to function must not be dotted")
-                                    }
-                                },
-                                _ => panic!("Arguments to function must not be dotted"),
-                            };
-
-                            f(*a).to_string()
-                        },
+                        Object::RustFunc(f) => f(*a).to_string(),
                         _ => panic!("Symbol was not a function")
                     }
                 } else {
@@ -76,11 +60,4 @@ impl Lisp {
             _ => format!("{}", object),
         }
     }
-}
-
-// Display internal version of object
-#[cfg(debug_assertions)]
-fn internal(arg: Object) -> Object {
-    println!("{:?}", arg);
-    Object::Nil
 }

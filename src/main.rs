@@ -1,5 +1,6 @@
 mod lisp;
 mod object;
+mod stdenv;
 
 use std::io;
 use std::io::prelude::*;
@@ -13,6 +14,7 @@ fn print_prompt() {
 fn main() {
     let stdin = io::stdin();
     let mut lisp = Lisp::new();
+    lisp.add_stdenv();
 
     print_prompt();
     for line in stdin.lock().lines() {
