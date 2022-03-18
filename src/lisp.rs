@@ -38,22 +38,27 @@ impl Lisp {
             .collect()
     }
 
-    fn eval_symbol(&mut self, symbol: &str) -> &mut Object {
-        self.variables.get_mut(symbol).unwrap_or_else(|| panic!("Undefined variable '{}'", symbol))
+    fn eval_symbol(&mut self, symbol: &str) -> &Object {
+        self.variables.get(symbol).unwrap_or_else(|| panic!("Undefined variable '{}'", symbol))
+    }
+
+    pub fn set_var(&mut self, symbol: &str, data: Object) {
+        if let Some(s) = self.variables.get_mut(symbol) {
+            *s = data;
+        } else {
+            self.add_var(symbol, data);
+        }
     }
 
     pub fn eval_object(&mut self, object: Object) -> Object {
         match object {
             Object::Pair(f, a) => { // Execute function
-                if let Object::Symbol(s) = *f {
-                    match self.eval_symbol(&s) {
-                        Object::RustFunc(f) => f(self, *a),
-                        _ => panic!("Symbol was not a function")
-                    }
-                } else {
-                    panic!("Expected symbol for function name")
+                match self.eval_object(*f) {
+                    Object::RustFunc(f) => f(self, *a),
+                    _ => panic!("Object was not a function")
                 }
             },
+            Object::Symbol(s) => self.eval_symbol(&s).clone(),
             a => a,
         }
     }
@@ -62,18 +67,6 @@ impl Lisp {
         let strings = Self::split_into_strings(input); // Split code into seperate tokens
         let object = Object::eval(strings); // Evaluate tokens into objects
 
-        match object {
-            Object::Pair(f, a) => { // Execute function
-                if let Object::Symbol(s) = *f {
-                    match self.eval_symbol(&s) {
-                        Object::RustFunc(f) => f(self, *a).to_string(),
-                        _ => panic!("Symbol was not a function")
-                    }
-                } else {
-                    panic!("Expected symbol for function name")
-                }
-            },
-            _ => format!("{}", object),
-        }
+        format!("{}", self.eval_object(object))
     }
 }

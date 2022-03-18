@@ -9,6 +9,9 @@ impl Lisp {
         // Functions
         self.add_func("quote", quote);
         self.add_func("exit", exit);
+        self.add_func("set", set);
+
+        // Math functions
         self.add_func("+", add);
         self.add_func("-", minus);
         self.add_func("*", times);
@@ -139,23 +142,52 @@ fn add(lisp: &mut Lisp, arg: Object) -> Object {
     }
 }
 
+// Set var
+fn set(lisp: &mut Lisp, arg: Object) -> Object {
+    let (symbol, data) = match arg {
+        Object::Pair(a, b) => {
+            match *b {
+                Object::Pair(c, d) => {
+                    if *d != Object::Nil {
+                        panic!("set requires two arguments")
+                    }
+
+                    (a, c)
+                },
+                Object::Nil => panic!("set requires two arguments"),
+                _ => panic!("set doesn't accept dotted arguments"),
+            }
+        },
+        _ => panic!("set doesn't accept dotted arguments"),
+    };
+
+    if let Object::Symbol(symbol) = *symbol {
+        let data = lisp.eval_object(*data);
+        lisp.set_var(&symbol, data);
+    } else {
+        panic!("set requires a symbol for first arguments");
+    }
+
+    Object::Nil
+}
+
 // Returns whatever its given, used for when you don't want to evaluate something
 fn quote(_: &mut Lisp, arg: Object) -> Object {
     arg
 }
 
-// Returns whatever its given, used for when you don't want to evaluate something
-fn exit(_: &mut Lisp, arg: Object) -> Object {
+// Exit lisp interpreter, number may be provided for exit code
+fn exit(lisp: &mut Lisp, arg: Object) -> Object {
     let exit_code = match arg {
         Object::Pair(a, b) => {
             if *b != Object::Nil {
                 panic!("exit doesn't accept multiple arguments")
             }
 
-            if let Object::Number(n) = *a {
+            if let Object::Number(n) = lisp.eval_object(*a) {
                 n
             } else {
-                panic!("+ requires number arguments");
+                panic!("exit requires number arguments");
             }
         },
         _ => 0.0,

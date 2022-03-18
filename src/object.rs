@@ -140,7 +140,7 @@ impl fmt::Debug for Object {
         match self {
             Self::Pair(a, b) => write!(f, "({:?} . {:?})", a, b),
             Self::Number(i) => write!(f, "{}", i),
-            Self::Character(c) => write!(f, "\'{}\'", c),
+            Self::Character(c) => write!(f, "\\{}", c),
             Self::Symbol(s) => write!(f, "{}", s),
             Self::RustFunc(x) => write!(f, "{:p}", x),
             Self::Nil => write!(f, "()"),
