@@ -2,7 +2,7 @@ use crate::lisp::Lisp;
 use crate::object::Object;
 
 impl Lisp {
-    pub fn add_stdenv(&mut self) {
+    pub fn add_stdenv(&mut self) -> &mut Self {
         // Variables
         self.add_var("nil", Object::Nil);
         
@@ -22,7 +22,7 @@ impl Lisp {
         self.add_func("/", divide);
 
         #[cfg(debug_assertions)]
-        self.add_func("internal", internal);
+        self.add_func("internal", internal)
     }
 }
 
