@@ -8,6 +8,7 @@ impl Lisp {
         
         // Functions
         self.add_func("quote", quote);
+        self.add_func("exit", exit);
         self.add_func("+", add);
         self.add_func("-", minus);
         self.add_func("*", times);
@@ -24,7 +25,7 @@ fn divide(lisp: &mut Lisp, arg: Object) -> Object {
         Object::Pair(a, b) => {
             sum = match lisp.eval_object(*a) {
                 Object::Number(i) => i,
-                _ => panic!("/ requires integer arguments")
+                _ => panic!("/ requires number arguments")
             };
 
             *b
@@ -37,7 +38,7 @@ fn divide(lisp: &mut Lisp, arg: Object) -> Object {
             Object::Pair(a, b) => {
                 sum /= match lisp.eval_object(*a) {
                     Object::Number(i) => i,
-                    _ => panic!("/ requires integer arguments")
+                    _ => panic!("/ requires number arguments")
                 };
 
                 cur_object = *b
@@ -54,7 +55,7 @@ fn times(lisp: &mut Lisp, arg: Object) -> Object {
         Object::Pair(a, b) => {
             sum = match lisp.eval_object(*a) {
                 Object::Number(i) => i,
-                _ => panic!("* requires integer arguments")
+                _ => panic!("* requires number arguments")
             };
 
             *b
@@ -67,7 +68,7 @@ fn times(lisp: &mut Lisp, arg: Object) -> Object {
             Object::Pair(a, b) => {
                 sum *= match lisp.eval_object(*a) {
                     Object::Number(i) => i,
-                    _ => panic!("* requires integer arguments")
+                    _ => panic!("* requires number arguments")
                 };
 
                 cur_object = *b
@@ -84,7 +85,7 @@ fn minus(lisp: &mut Lisp, arg: Object) -> Object {
         Object::Pair(a, b) => {
             sum = match lisp.eval_object(*a) {
                 Object::Number(i) => i,
-                _ => panic!("- requires integer arguments")
+                _ => panic!("- requires number arguments")
             };
 
             *b
@@ -97,7 +98,7 @@ fn minus(lisp: &mut Lisp, arg: Object) -> Object {
             Object::Pair(a, b) => {
                 sum -= match lisp.eval_object(*a) {
                     Object::Number(i) => i,
-                    _ => panic!("- requires integer arguments")
+                    _ => panic!("- requires number arguments")
                 };
 
                 cur_object = *b
@@ -114,7 +115,7 @@ fn add(lisp: &mut Lisp, arg: Object) -> Object {
         Object::Pair(a, b) => {
             sum = match lisp.eval_object(*a) {
                 Object::Number(i) => i,
-                _ => panic!("+ requires integer arguments")
+                _ => panic!("+ requires number arguments")
             };
 
             *b
@@ -127,7 +128,7 @@ fn add(lisp: &mut Lisp, arg: Object) -> Object {
             Object::Pair(a, b) => {
                 sum += match lisp.eval_object(*a) {
                     Object::Number(i) => i,
-                    _ => panic!("+ requires integer arguments")
+                    _ => panic!("+ requires number arguments")
                 };
 
                 cur_object = *b
@@ -143,12 +144,32 @@ fn quote(_: &mut Lisp, arg: Object) -> Object {
     arg
 }
 
+// Returns whatever its given, used for when you don't want to evaluate something
+fn exit(_: &mut Lisp, arg: Object) -> Object {
+    let exit_code = match arg {
+        Object::Pair(a, b) => {
+            if *b != Object::Nil {
+                panic!("exit doesn't accept multiple arguments")
+            }
+
+            if let Object::Number(n) = *a {
+                n
+            } else {
+                panic!("+ requires number arguments");
+            }
+        },
+        _ => 0.0,
+    };
+
+    std::process::exit(exit_code as i32);
+}
+
 // Display internal version of an object
 #[cfg(debug_assertions)]
 fn internal(_: &mut Lisp, arg: Object) -> Object {
     let a = match arg {
-        Object::Pair(a, n) => {
-            if *n != Object::Nil {
+        Object::Pair(a, b) => {
+            if *b != Object::Nil {
                 panic!("internal doesn't accept multiple arguments")
             }
             a
