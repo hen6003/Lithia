@@ -4,6 +4,7 @@ use crate::Lisp;
 #[derive(Clone)]
 pub enum Object {
     Nil,
+    True,
     Pair(Box<Object>, Box<Object>),
     Symbol(String),
     Number(f32),
@@ -170,6 +171,7 @@ impl fmt::Debug for Object {
             Self::Symbol(s) => write!(f, "{}", s),
             Self::RustFunc(x) => write!(f, "{:p}", x),
             Self::Nil => write!(f, "()"),
+            Self::True => write!(f, "t"),
         }
     }
 }
@@ -203,6 +205,7 @@ impl PartialEq for Object {
             },
             Self::RustFunc(_) => false,
             Self::Nil => matches!(other, Self::Nil),
+            Self::True => matches!(other, Self::True),
         }
     }
 }

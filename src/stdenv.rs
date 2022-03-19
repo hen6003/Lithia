@@ -5,24 +5,34 @@ impl Lisp {
     pub fn add_stdenv(&mut self) -> &mut Self {
         // Variables
         self.add_var("nil", Object::Nil);
+        self.add_var("t", Object::True);
         
         // Functions
         self.add_func("quote", quote);
         self.add_func("exit", exit);
-        self.add_func("set", set);
         self.add_func("eval", eval);
         self.add_func("loop", lisploop);
+        self.add_func("while", lispwhile);
         self.add_func("print", print);
         self.add_func("read", read);
 
         // Math functions
+        self.add_func("=", set);
         self.add_func("+", add);
         self.add_func("-", minus);
         self.add_func("*", times);
         self.add_func("/", divide);
-
-        #[cfg(debug_assertions)]
-        self.add_func("internal", internal);
+        self.add_func("==", equal);
+        self.add_func("!=", notequal);
+        
+        // Non-symbol names
+        self.add_func("set", set);
+        self.add_func("add", add);
+        self.add_func("sub", minus);
+        self.add_func("mul", times);
+        self.add_func("div", divide);
+        self.add_func("eq", equal);
+        self.add_func("nq", notequal);
 
         self
     }
@@ -182,11 +192,38 @@ fn eval(lisp: &mut Lisp, arg: Object) -> Object {
     let mut objects = Vec::new();
     let mut cur_object: Object = match arg {
         Object::Pair(a, b) => {
+            objects.push(lisp.eval_object(*a));
+
+            *b
+        },
+        _ => panic!("eval requires multiple arguments"),
+    };
+    
+    loop {
+        match cur_object {
+            Object::Pair(a, b) => {
+                objects.push(lisp.eval_object(*a));
+
+                cur_object = *b
+            },
+            Object::Nil => break,
+            _ => panic!("eval doesn't accept dotted arguments"),
+        }
+    }
+
+    lisp.eval_objects(objects)
+}
+
+// Evaluates the given object forever
+fn lisploop(lisp: &mut Lisp, arg: Object) -> Object {
+    let mut objects = Vec::new();
+    let mut cur_object: Object = match arg {
+        Object::Pair(a, b) => {
             objects.push(*a);
 
             *b
         },
-        _ => panic!("+ requires multiple arguments"),
+        _ => panic!("loop requires multiple arguments"),
     };
     
     loop {
@@ -197,27 +234,108 @@ fn eval(lisp: &mut Lisp, arg: Object) -> Object {
                 cur_object = *b
             },
             Object::Nil => break,
-            _ => panic!("+ doesn't accept dotted arguments"),
+            _ => panic!("loop doesn't accept dotted arguments"),
         }
     }
 
-    lisp.eval_objects(objects)
+    loop {
+        lisp.eval_objects(objects.clone());
+    }
 }
 
 // Evaluates the given object forever
-fn lisploop(lisp: &mut Lisp, arg: Object) -> Object {
-    let object = match arg {
+fn lispwhile(lisp: &mut Lisp, arg: Object) -> Object {
+    let cond;
+    let mut objects = Vec::new();
+    let mut cur_object: Object = match arg {
         Object::Pair(a, b) => {
-            if *b != Object::Nil {
-                panic!("loop doesn't accept multiple arguments")
-            }
-            a
-        },
-        _ => panic!("loop doesn't accept dotted arguments"),
-    };
+            cond = a;
 
+            *b
+        },
+        _ => panic!("while requires multiple arguments"),
+    };
+    
     loop {
-        lisp.eval_object(*object.clone());
+        match cur_object {
+            Object::Pair(a, b) => {
+                objects.push(*a);
+
+                cur_object = *b
+            },
+            Object::Nil => break,
+            _ => panic!("while doesn't accept dotted arguments"),
+        }
+    }
+
+    while lisp.eval_object(*cond.clone()) != Object::Nil {
+        lisp.eval_objects(objects.clone());
+    }
+
+    Object::Nil
+}
+
+// Evaluates the given object forever
+fn equal(lisp: &mut Lisp, arg: Object) -> Object {
+    let first;
+    let second;
+    
+    match arg {
+        Object::Pair(a, b) => {
+            first = a;
+
+            match *b {
+                Object::Pair(a, b) => {
+                    second = a;
+
+                    match *b {
+                        Object::Nil => (),
+                        _ => panic!("== requires two arguments"),
+                    }
+                },
+                Object::Nil => panic!("== requires two arguments"),
+                _ => panic!("== doesn't accept dotted arguments"),
+            }
+        },
+        _ => panic!("== requires two arguments"),
+    }; 
+
+    if lisp.eval_object(*first) == lisp.eval_object(*second) {
+        Object::True
+    } else {
+        Object::Nil
+    }
+}
+
+// Evaluates the given object forever
+fn notequal(lisp: &mut Lisp, arg: Object) -> Object {
+    let first;
+    let second;
+    
+    match arg {
+        Object::Pair(a, b) => {
+            first = a;
+
+            match *b {
+                Object::Pair(a, b) => {
+                    second = a;
+
+                    match *b {
+                        Object::Nil => (),
+                        _ => panic!("!= requires two arguments"),
+                    }
+                },
+                Object::Nil => panic!("!= requires two arguments"),
+                _ => panic!("!= doesn't accept dotted arguments"),
+            }
+        },
+        _ => panic!("!= requires two arguments"),
+    }; 
+
+    if lisp.eval_object(*first) != lisp.eval_object(*second) {
+        Object::True
+    } else {
+        Object::Nil
     }
 }
 
@@ -305,22 +423,4 @@ fn read(lisp: &mut Lisp, arg: Object) -> Object {
     } else {
         Object::Nil
     }
-}
-
-// Display internal version of an object
-#[cfg(debug_assertions)]
-fn internal(_: &mut Lisp, arg: Object) -> Object {
-    let a = match arg {
-        Object::Pair(a, b) => {
-            if *b != Object::Nil {
-                panic!("internal doesn't accept multiple arguments")
-            }
-            a
-        },
-        _ => panic!("internal doesn't accept dotted arguments"),
-    };
-
-    println!("{:?}", a);
-
-    Object::Nil
 }
