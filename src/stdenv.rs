@@ -179,17 +179,29 @@ fn set(lisp: &mut Lisp, arg: Object) -> Object {
 
 // Evaluate an object and what it returns
 fn eval(lisp: &mut Lisp, arg: Object) -> Object {
-    let object = match arg {
+    let mut objects = Vec::new();
+    let mut cur_object: Object = match arg {
         Object::Pair(a, b) => {
-            if *b != Object::Nil {
-                panic!("eval doesn't accept multiple arguments")
-            }
-            lisp.eval_object(*a)
-        },
-        _ => panic!("eval doesn't accept dotted arguments"),
-    };
+            objects.push(*a);
 
-    lisp.eval_object(object)
+            *b
+        },
+        _ => panic!("+ requires multiple arguments"),
+    };
+    
+    loop {
+        match cur_object {
+            Object::Pair(a, b) => {
+                objects.push(*a);
+
+                cur_object = *b
+            },
+            Object::Nil => break,
+            _ => panic!("+ doesn't accept dotted arguments"),
+        }
+    }
+
+    lisp.eval_objects(objects)
 }
 
 // Evaluates the given object forever
