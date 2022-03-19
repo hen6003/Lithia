@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 
 use crate::object::Object;
+use crate::errors::*;
 
 pub struct Lisp {
-    variables: HashMap<String, Object>,
+    variables: HashMap<String, Box<Object>>,
 }
 
 impl Lisp {
@@ -13,24 +14,28 @@ impl Lisp {
         }
     }
 
-    pub fn add_var(&mut self, name: &str, object: Object) -> &mut Self {
+    pub fn add_var(&mut self, name: &str, object: Box<Object>) -> &mut Self {
         self.variables.insert(name.to_string(), object);
         self
     }
     
-    pub fn add_func(&mut self, name: &str, func: fn (&mut Self, Object) -> Object) -> &mut Self {
-        self.add_var(name, Object::RustFunc(func))
+    pub fn add_func(&mut self, name: &str, func: fn (&mut Self, Object) -> LispResult) -> &mut Self {
+        self.add_var(name, Box::new(Object::RustFunc(func)))
     } 
    
-    fn eval_symbol(&mut self, symbol: &str) -> &Object {
-        if symbol.len() > 0 {
-            self.variables.get(symbol).unwrap_or_else(|| panic!("Undefined variable '{}'", symbol))
+    fn eval_symbol(&mut self, symbol: &str) -> LispResult {
+        if !symbol.is_empty() {
+            match self.variables.get(symbol) {
+                Some(s) => Ok(s.clone()),
+                None => Err(LispError::new(LispErrorKind::Eval,
+                                           EvalError::UnknownSymbol(symbol.to_string())))
+            }
         } else {
-            &Object::Nil
+            Ok(Box::new(Object::Nil))
         }
     }
 
-    pub fn set_var(&mut self, symbol: &str, data: Object) {
+    pub fn set_var(&mut self, symbol: &str, data: Box<Object>) {
         if let Some(s) = self.variables.get_mut(symbol) {
             *s = data;
         } else {
@@ -38,31 +43,32 @@ impl Lisp {
         }
     }
 
-    pub fn eval_object(&mut self, object: Object) -> Object {
-        match object {
+    pub fn eval_object(&mut self, object: Box<Object>) -> LispResult {
+        match *object {
             Object::Pair(f, a) => { // Execute function
-                match self.eval_object(*f) {
+                match *self.eval_object(f)? {
                     Object::RustFunc(f) => f(self, *a),
                     _ => panic!("Object was not a function")
                 }
             },
-            Object::Symbol(s) => self.eval_symbol(&s).clone(),
-            a => a,
+            Object::Symbol(s) => Ok(self.eval_symbol(&s)?),
+            _ => Ok(object),
         }
     }
     
-    pub fn eval_objects(&mut self, objects: Vec<Object>) -> Object {
-        let mut ret = Object::Nil;
+    pub fn eval_objects(&mut self, objects: Vec<Box<Object>>) -> LispResult {
+        let mut ret = Box::new(Object::Nil);
 
         for o in objects {
-            ret = self.eval_object(o)
+            ret = self.eval_object(o)?
         }
 
-        ret
+        Ok(ret)
     }
 
-    pub fn eval(&mut self, input: &str) -> Object {
+    pub fn eval(&mut self, input: &str) -> LispResult {
         let objects = Object::eval(input); // Evaluate tokens into objects
+        let objects = objects.into_iter().map(Box::new).collect(); // Store objects on the heap
 
         self.eval_objects(objects)
     }

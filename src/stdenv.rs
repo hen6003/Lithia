@@ -1,11 +1,12 @@
 use crate::lisp::Lisp;
 use crate::object::Object;
+use crate::errors::*;
 
 impl Lisp {
     pub fn add_stdenv(&mut self) -> &mut Self {
         // Variables
-        self.add_var("nil", Object::Nil);
-        self.add_var("t", Object::True);
+        self.add_var("nil", Box::new(Object::Nil));
+        self.add_var("t", Box::new(Object::True));
         
         // Functions
         self.add_func("quote", quote);
@@ -38,11 +39,11 @@ impl Lisp {
     }
 }
 
-fn divide(lisp: &mut Lisp, arg: Object) -> Object {
+fn divide(lisp: &mut Lisp, arg: Object) -> LispResult {
     let mut sum;
     let mut cur_object: Object = match arg {
         Object::Pair(a, b) => {
-            sum = match lisp.eval_object(*a) {
+            sum = match *lisp.eval_object(a)? {
                 Object::Number(i) => i,
                 _ => panic!("/ requires number arguments")
             };
@@ -55,24 +56,24 @@ fn divide(lisp: &mut Lisp, arg: Object) -> Object {
     loop {
         match cur_object {
             Object::Pair(a, b) => {
-                sum /= match lisp.eval_object(*a) {
+                sum /= match *lisp.eval_object(a)? {
                     Object::Number(i) => i,
                     _ => panic!("/ requires number arguments")
                 };
 
                 cur_object = *b
             },
-            Object::Nil => break Object::Number(sum),
+            Object::Nil => break Ok(Box::new(Object::Number(sum))),
             _ => panic!("/ doesn't accept dotted arguments"),
         }
     }
 }
 
-fn times(lisp: &mut Lisp, arg: Object) -> Object {
+fn times(lisp: &mut Lisp, arg: Object) -> LispResult {
     let mut sum;
     let mut cur_object: Object = match arg {
         Object::Pair(a, b) => {
-            sum = match lisp.eval_object(*a) {
+            sum = match *lisp.eval_object(a)? {
                 Object::Number(i) => i,
                 _ => panic!("* requires number arguments")
             };
@@ -85,24 +86,24 @@ fn times(lisp: &mut Lisp, arg: Object) -> Object {
     loop {
         match cur_object {
             Object::Pair(a, b) => {
-                sum *= match lisp.eval_object(*a) {
+                sum *= match *lisp.eval_object(a)? {
                     Object::Number(i) => i,
                     _ => panic!("* requires number arguments")
                 };
 
                 cur_object = *b
             },
-            Object::Nil => break Object::Number(sum),
+            Object::Nil => break Ok(Box::new(Object::Number(sum))),
             _ => panic!("* doesn't accept dotted arguments"),
         }
     }
 }
 
-fn minus(lisp: &mut Lisp, arg: Object) -> Object {
+fn minus(lisp: &mut Lisp, arg: Object) -> LispResult {
     let mut sum;
     let mut cur_object: Object = match arg {
         Object::Pair(a, b) => {
-            sum = match lisp.eval_object(*a) {
+            sum = match *lisp.eval_object(a)? {
                 Object::Number(i) => i,
                 _ => panic!("- requires number arguments")
             };
@@ -115,24 +116,24 @@ fn minus(lisp: &mut Lisp, arg: Object) -> Object {
     loop {
         match cur_object {
             Object::Pair(a, b) => {
-                sum -= match lisp.eval_object(*a) {
+                sum -= match *lisp.eval_object(a)? {
                     Object::Number(i) => i,
                     _ => panic!("- requires number arguments")
                 };
 
                 cur_object = *b
             },
-            Object::Nil => break Object::Number(sum),
+            Object::Nil => break Ok(Box::new(Object::Number(sum))),
             _ => panic!("- doesn't accept dotted arguments"),
         }
     }
 }
 
-fn add(lisp: &mut Lisp, arg: Object) -> Object {
+fn add(lisp: &mut Lisp, arg: Object) -> LispResult {
     let mut sum;
     let mut cur_object: Object = match arg {
         Object::Pair(a, b) => {
-            sum = match lisp.eval_object(*a) {
+            sum = match *lisp.eval_object(a)? {
                 Object::Number(i) => i,
                 _ => panic!("+ requires number arguments")
             };
@@ -145,21 +146,21 @@ fn add(lisp: &mut Lisp, arg: Object) -> Object {
     loop {
         match cur_object {
             Object::Pair(a, b) => {
-                sum += match lisp.eval_object(*a) {
+                sum += match *lisp.eval_object(a)? {
                     Object::Number(i) => i,
                     _ => panic!("+ requires number arguments")
                 };
 
                 cur_object = *b
             },
-            Object::Nil => break Object::Number(sum),
+            Object::Nil => break Ok(Box::new(Object::Number(sum))),
             _ => panic!("+ doesn't accept dotted arguments"),
         }
     }
 }
 
 // Set variable
-fn set(lisp: &mut Lisp, arg: Object) -> Object {
+fn set(lisp: &mut Lisp, arg: Object) -> LispResult {
     let (symbol, data) = match arg {
         Object::Pair(a, b) => {
             match *b {
@@ -178,21 +179,21 @@ fn set(lisp: &mut Lisp, arg: Object) -> Object {
     };
 
     if let Object::Symbol(symbol) = *symbol {
-        let data = lisp.eval_object(*data);
+        let data = lisp.eval_object(data)?;
         lisp.set_var(&symbol, data);
     } else {
         panic!("set requires a symbol for first arguments");
     }
 
-    Object::Nil
+    Ok(Box::new(Object::Nil))
 }
 
 // Evaluate an object and what it returns
-fn eval(lisp: &mut Lisp, arg: Object) -> Object {
+fn eval(lisp: &mut Lisp, arg: Object) -> LispResult {
     let mut objects = Vec::new();
     let mut cur_object: Object = match arg {
         Object::Pair(a, b) => {
-            objects.push(lisp.eval_object(*a));
+            objects.push(lisp.eval_object(a)?);
 
             *b
         },
@@ -202,7 +203,7 @@ fn eval(lisp: &mut Lisp, arg: Object) -> Object {
     loop {
         match cur_object {
             Object::Pair(a, b) => {
-                objects.push(lisp.eval_object(*a));
+                objects.push(lisp.eval_object(a)?);
 
                 cur_object = *b
             },
@@ -215,11 +216,11 @@ fn eval(lisp: &mut Lisp, arg: Object) -> Object {
 }
 
 // Evaluates the given object forever
-fn lisploop(lisp: &mut Lisp, arg: Object) -> Object {
+fn lisploop(lisp: &mut Lisp, arg: Object) -> LispResult {
     let mut objects = Vec::new();
     let mut cur_object: Object = match arg {
         Object::Pair(a, b) => {
-            objects.push(*a);
+            objects.push(a);
 
             *b
         },
@@ -229,7 +230,7 @@ fn lisploop(lisp: &mut Lisp, arg: Object) -> Object {
     loop {
         match cur_object {
             Object::Pair(a, b) => {
-                objects.push(*a);
+                objects.push(a);
 
                 cur_object = *b
             },
@@ -239,12 +240,12 @@ fn lisploop(lisp: &mut Lisp, arg: Object) -> Object {
     }
 
     loop {
-        lisp.eval_objects(objects.clone());
+        lisp.eval_objects(objects.clone())?;
     }
 }
 
 // Evaluates the given object forever
-fn lispwhile(lisp: &mut Lisp, arg: Object) -> Object {
+fn lispwhile(lisp: &mut Lisp, arg: Object) -> LispResult {
     let cond;
     let mut objects = Vec::new();
     let mut cur_object: Object = match arg {
@@ -259,7 +260,7 @@ fn lispwhile(lisp: &mut Lisp, arg: Object) -> Object {
     loop {
         match cur_object {
             Object::Pair(a, b) => {
-                objects.push(*a);
+                objects.push(a);
 
                 cur_object = *b
             },
@@ -268,15 +269,15 @@ fn lispwhile(lisp: &mut Lisp, arg: Object) -> Object {
         }
     }
 
-    while lisp.eval_object(*cond.clone()) != Object::Nil {
-        lisp.eval_objects(objects.clone());
+    while *lisp.eval_object(cond.clone())? != Object::Nil {
+        lisp.eval_objects(objects.clone())?;
     }
 
-    Object::Nil
+    Ok(Box::new(Object::Nil))
 }
 
 // Evaluates the given object forever
-fn equal(lisp: &mut Lisp, arg: Object) -> Object {
+fn equal(lisp: &mut Lisp, arg: Object) -> LispResult {
     let first;
     let second;
     
@@ -300,15 +301,15 @@ fn equal(lisp: &mut Lisp, arg: Object) -> Object {
         _ => panic!("== requires two arguments"),
     }; 
 
-    if lisp.eval_object(*first) == lisp.eval_object(*second) {
-        Object::True
+    if *lisp.eval_object(first)? == *lisp.eval_object(second)? {
+        Ok(Box::new(Object::True))
     } else {
-        Object::Nil
+        Ok(Box::new(Object::Nil))
     }
 }
 
 // Evaluates the given object forever
-fn notequal(lisp: &mut Lisp, arg: Object) -> Object {
+fn notequal(lisp: &mut Lisp, arg: Object) -> LispResult {
     let first;
     let second;
     
@@ -332,35 +333,35 @@ fn notequal(lisp: &mut Lisp, arg: Object) -> Object {
         _ => panic!("!= requires two arguments"),
     }; 
 
-    if lisp.eval_object(*first) != lisp.eval_object(*second) {
-        Object::True
+    if *lisp.eval_object(first)? != *lisp.eval_object(second)? {
+        Ok(Box::new(Object::True))
     } else {
-        Object::Nil
+        Ok(Box::new(Object::Nil))
     }
 }
 
 // Returns whatever its given, used for when you don't want to evaluate something
-fn quote(_: &mut Lisp, arg: Object) -> Object {
+fn quote(_: &mut Lisp, arg: Object) -> LispResult {
     match arg {
         Object::Pair(a, b) => {
             if *b != Object::Nil {
                 panic!("quote doesn't accept multiple arguments")
             }
-            *a
+            Ok(a)
         },
         _ => panic!("quote doesn't accept dotted arguments"),
     }
 }
 
 // Exit lisp interpreter, number may be provided for exit code
-fn exit(lisp: &mut Lisp, arg: Object) -> Object {
+fn exit(lisp: &mut Lisp, arg: Object) -> LispResult {
     let exit_code = match arg {
         Object::Pair(a, b) => {
             if *b != Object::Nil {
                 panic!("exit doesn't accept multiple arguments")
             }
 
-            if let Object::Number(n) = lisp.eval_object(*a) {
+            if let Object::Number(n) = *lisp.eval_object(a)? {
                 n
             } else {
                 panic!("exit requires number arguments");
@@ -373,24 +374,24 @@ fn exit(lisp: &mut Lisp, arg: Object) -> Object {
 }
 
 // Display an object
-fn print(lisp: &mut Lisp, arg: Object) -> Object {
+fn print(lisp: &mut Lisp, arg: Object) -> LispResult {
     let a = match arg {
         Object::Pair(a, b) => {
             if *b != Object::Nil {
                 panic!("print doesn't accept multiple arguments")
             }
-            lisp.eval_object(*a)
+            lisp.eval_object(a)?
         },
         _ => panic!("print doesn't accept dotted arguments"),
     };
 
     println!("{}", a);
 
-    Object::Nil
+    Ok(Box::new(Object::Nil))
 }
 
 // Reads a line into objects
-fn read(lisp: &mut Lisp, arg: Object) -> Object {
+fn read(lisp: &mut Lisp, arg: Object) -> LispResult {
     use std::io::{stdin, stdout, Write};
 
     let c = match arg {
@@ -398,7 +399,7 @@ fn read(lisp: &mut Lisp, arg: Object) -> Object {
             if *b != Object::Nil {
                 panic!("read doesn't accept multiple arguments")
             }
-            match lisp.eval_object(*a) {
+            match *lisp.eval_object(a)? {
                 Object::Character(c) => c,
                 _ => panic!("read doesn't accept non-characters")
             }
@@ -415,12 +416,13 @@ fn read(lisp: &mut Lisp, arg: Object) -> Object {
     stdout.flush().unwrap();
     
     stdin.read_line(&mut input).unwrap();
-    let objects = Object::eval(&input);
+    let objects = Object::eval(&input); // Evaluate tokens into objects
+    let objects: Vec<Box<Object>> = objects.into_iter().map(Box::new).collect(); // Store objects on the heap
 
     // Read cannot return multiple objects, even if multiple objects were evaluated
-    if objects.len() > 0 {
-        objects[0].clone()
+    if !objects.is_empty() {
+        Ok(objects[0].clone())
     } else {
-        Object::Nil
+        Ok(Box::new(Object::Nil))
     }
 }

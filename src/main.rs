@@ -1,6 +1,7 @@
 mod lisp;
 mod object;
 mod stdenv;
+mod errors;
 
 use std::env;
 use std::fs;
@@ -17,5 +18,6 @@ fn main() {
 
     Lisp::new()
         .add_stdenv()
-        .eval(&code);
+        .eval(&code)
+        .unwrap();
 }

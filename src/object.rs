@@ -1,5 +1,6 @@
 use regex::Regex;
 use crate::Lisp;
+use crate::errors::*;
 
 #[derive(Clone)]
 pub enum Object {
@@ -9,7 +10,7 @@ pub enum Object {
     Symbol(String),
     Number(f32),
     Character(char),
-    RustFunc(fn (&mut Lisp, Object) -> Object),
+    RustFunc(fn (&mut Lisp, Object) -> LispResult),
 }
 
 impl Object {
@@ -55,7 +56,7 @@ impl Object {
         ret
     }
 
-    fn iter_to_objects(strings: &mut dyn Iterator<Item = String>) -> Self {
+    fn iter_to_object(strings: &mut dyn Iterator<Item = String>) -> Self {
         let mut list = Vec::new();
         let mut dot_occured = false;
 
@@ -66,7 +67,7 @@ impl Object {
                         if dot_occured {
                             let mut list = Self::array_to_pair_list(list);
  
-                            list.append_to_pair_list(Self::iter_to_objects(strings));
+                            list.append_to_pair_list(Self::iter_to_object(strings));
 
                             if strings.next() != Some(")".to_string()) {
                                 panic!("Unexpected object after dotted list end")
@@ -74,7 +75,7 @@ impl Object {
 
                             break list;
                         } else {
-                            list.push(Self::iter_to_objects(strings))
+                            list.push(Self::iter_to_object(strings))
                         }
                     },
                     ")" => {
@@ -119,7 +120,7 @@ impl Object {
         loop {
             match iter.next() {
                 Some(s) => ret.push(match s.as_str() {
-                    "(" => Self::iter_to_objects(&mut iter),
+                    "(" => Self::iter_to_object(&mut iter),
                     ")" => panic!("Unmatched ')'"),
                     "." => panic!("Invalid '.'"),
                     s => Object::parse_atom(s),
