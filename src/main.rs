@@ -16,8 +16,12 @@ fn main() {
         "(loop (print (eval (read))))".to_string()
     };
 
-    Lisp::new()
+    let ret = Lisp::new()
         .add_stdenv()
-        .eval(&code)
-        .unwrap();
+        .eval(&code);
+
+    match ret {
+        Ok(_) => (),
+        Err(e) => panic!("{}", e),
+    }
 }

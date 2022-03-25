@@ -33,24 +33,25 @@ impl Lisp {
         self.add_func("mul", times);
         self.add_func("div", divide);
         self.add_func("eq", equal);
-        self.add_func("nq", notequal);
+        self.add_func("ne", notequal);
 
         self
     }
 }
 
-fn divide(lisp: &mut Lisp, arg: Object) -> LispResult {
+fn divide(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
     let mut sum;
     let mut cur_object: Object = match arg {
         Object::Pair(a, b) => {
             sum = match *lisp.eval_object(a)? {
                 Object::Number(i) => i,
-                _ => panic!("/ requires number arguments")
+                _ => return Err(RustFuncError::new_args_error(ArgumentsError::WrongType)),
             };
 
             *b
         },
-        _ => panic!("/ requires multiple arguments"),
+        Object::Nil => return Err(RustFuncError::new_args_error(ArgumentsError::NotEnough)),
+        _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
     };
     
     loop {
@@ -58,29 +59,30 @@ fn divide(lisp: &mut Lisp, arg: Object) -> LispResult {
             Object::Pair(a, b) => {
                 sum /= match *lisp.eval_object(a)? {
                     Object::Number(i) => i,
-                    _ => panic!("/ requires number arguments")
+                    _ => return Err(RustFuncError::new_args_error(ArgumentsError::WrongType)),
                 };
 
                 cur_object = *b
             },
             Object::Nil => break Ok(Box::new(Object::Number(sum))),
-            _ => panic!("/ doesn't accept dotted arguments"),
+            _ => break Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
         }
     }
 }
 
-fn times(lisp: &mut Lisp, arg: Object) -> LispResult {
+fn times(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
     let mut sum;
     let mut cur_object: Object = match arg {
         Object::Pair(a, b) => {
             sum = match *lisp.eval_object(a)? {
                 Object::Number(i) => i,
-                _ => panic!("* requires number arguments")
+                _ => return Err(RustFuncError::new_args_error(ArgumentsError::WrongType)),
             };
 
             *b
         },
-        _ => panic!("* requires multiple arguments"),
+        Object::Nil => return Err(RustFuncError::new_args_error(ArgumentsError::NotEnough)),
+        _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
     };
     
     loop {
@@ -88,29 +90,30 @@ fn times(lisp: &mut Lisp, arg: Object) -> LispResult {
             Object::Pair(a, b) => {
                 sum *= match *lisp.eval_object(a)? {
                     Object::Number(i) => i,
-                    _ => panic!("* requires number arguments")
+                    _ => return Err(RustFuncError::new_args_error(ArgumentsError::WrongType)),
                 };
 
                 cur_object = *b
             },
             Object::Nil => break Ok(Box::new(Object::Number(sum))),
-            _ => panic!("* doesn't accept dotted arguments"),
+            _ => break Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
         }
     }
 }
 
-fn minus(lisp: &mut Lisp, arg: Object) -> LispResult {
+fn minus(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
     let mut sum;
     let mut cur_object: Object = match arg {
         Object::Pair(a, b) => {
             sum = match *lisp.eval_object(a)? {
                 Object::Number(i) => i,
-                _ => panic!("- requires number arguments")
+                _ => return Err(RustFuncError::new_args_error(ArgumentsError::WrongType)),
             };
 
             *b
         },
-        _ => panic!("- requires multiple arguments"),
+        Object::Nil => return Err(RustFuncError::new_args_error(ArgumentsError::NotEnough)),
+        _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
     };
     
     loop {
@@ -118,29 +121,30 @@ fn minus(lisp: &mut Lisp, arg: Object) -> LispResult {
             Object::Pair(a, b) => {
                 sum -= match *lisp.eval_object(a)? {
                     Object::Number(i) => i,
-                    _ => panic!("- requires number arguments")
+                    _ => return Err(RustFuncError::new_args_error(ArgumentsError::WrongType)),
                 };
 
                 cur_object = *b
             },
             Object::Nil => break Ok(Box::new(Object::Number(sum))),
-            _ => panic!("- doesn't accept dotted arguments"),
+            _ => break Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
         }
     }
 }
 
-fn add(lisp: &mut Lisp, arg: Object) -> LispResult {
+fn add(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
     let mut sum;
     let mut cur_object: Object = match arg {
         Object::Pair(a, b) => {
             sum = match *lisp.eval_object(a)? {
                 Object::Number(i) => i,
-                _ => panic!("+ requires number arguments")
+                _ => return Err(RustFuncError::new_args_error(ArgumentsError::WrongType)),
             };
 
             *b
         },
-        _ => panic!("+ requires multiple arguments"),
+        Object::Nil => return Err(RustFuncError::new_args_error(ArgumentsError::NotEnough)),
+        _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
     };
     
     loop {
@@ -148,48 +152,48 @@ fn add(lisp: &mut Lisp, arg: Object) -> LispResult {
             Object::Pair(a, b) => {
                 sum += match *lisp.eval_object(a)? {
                     Object::Number(i) => i,
-                    _ => panic!("+ requires number arguments")
+                    _ => return Err(RustFuncError::new_args_error(ArgumentsError::WrongType)),
                 };
 
                 cur_object = *b
             },
             Object::Nil => break Ok(Box::new(Object::Number(sum))),
-            _ => panic!("+ doesn't accept dotted arguments"),
+            _ => break Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
         }
     }
 }
 
 // Set variable
-fn set(lisp: &mut Lisp, arg: Object) -> LispResult {
+fn set(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
     let (symbol, data) = match arg {
         Object::Pair(a, b) => {
             match *b {
                 Object::Pair(c, d) => {
                     if *d != Object::Nil {
-                        panic!("set requires two arguments")
+                        return Err(RustFuncError::new_args_error(ArgumentsError::NotEnough))
                     }
 
                     (a, c)
                 },
-                Object::Nil => panic!("set requires two arguments"),
-                _ => panic!("set doesn't accept dotted arguments"),
+                Object::Nil => return Err(RustFuncError::new_args_error(ArgumentsError::NotEnough)),
+                _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
             }
         },
-        _ => panic!("set doesn't accept dotted arguments"),
+        _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
     };
 
     if let Object::Symbol(symbol) = *symbol {
         let data = lisp.eval_object(data)?;
         lisp.set_var(&symbol, data);
     } else {
-        panic!("set requires a symbol for first arguments");
+        return Err(RustFuncError::new_args_error(ArgumentsError::WrongType))
     }
 
     Ok(Box::new(Object::Nil))
 }
 
 // Evaluate an object and what it returns
-fn eval(lisp: &mut Lisp, arg: Object) -> LispResult {
+fn eval(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
     let mut objects = Vec::new();
     let mut cur_object: Object = match arg {
         Object::Pair(a, b) => {
@@ -197,7 +201,8 @@ fn eval(lisp: &mut Lisp, arg: Object) -> LispResult {
 
             *b
         },
-        _ => panic!("eval requires multiple arguments"),
+        Object::Nil => return Err(RustFuncError::new_args_error(ArgumentsError::NotEnough)),
+        _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
     };
     
     loop {
@@ -208,15 +213,15 @@ fn eval(lisp: &mut Lisp, arg: Object) -> LispResult {
                 cur_object = *b
             },
             Object::Nil => break,
-            _ => panic!("eval doesn't accept dotted arguments"),
+            _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
         }
     }
 
-    lisp.eval_objects(objects)
+    Ok(lisp.eval_objects(objects)?)
 }
 
 // Evaluates the given object forever
-fn lisploop(lisp: &mut Lisp, arg: Object) -> LispResult {
+fn lisploop(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
     let mut objects = Vec::new();
     let mut cur_object: Object = match arg {
         Object::Pair(a, b) => {
@@ -224,7 +229,8 @@ fn lisploop(lisp: &mut Lisp, arg: Object) -> LispResult {
 
             *b
         },
-        _ => panic!("loop requires multiple arguments"),
+        Object::Nil => return Err(RustFuncError::new_args_error(ArgumentsError::NotEnough)),
+        _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
     };
     
     loop {
@@ -235,7 +241,7 @@ fn lisploop(lisp: &mut Lisp, arg: Object) -> LispResult {
                 cur_object = *b
             },
             Object::Nil => break,
-            _ => panic!("loop doesn't accept dotted arguments"),
+            _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
         }
     }
 
@@ -245,7 +251,7 @@ fn lisploop(lisp: &mut Lisp, arg: Object) -> LispResult {
 }
 
 // Evaluates the given object forever
-fn lispwhile(lisp: &mut Lisp, arg: Object) -> LispResult {
+fn lispwhile(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
     let cond;
     let mut objects = Vec::new();
     let mut cur_object: Object = match arg {
@@ -254,7 +260,8 @@ fn lispwhile(lisp: &mut Lisp, arg: Object) -> LispResult {
 
             *b
         },
-        _ => panic!("while requires multiple arguments"),
+        Object::Nil => return Err(RustFuncError::new_args_error(ArgumentsError::NotEnough)),
+        _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
     };
     
     loop {
@@ -265,7 +272,7 @@ fn lispwhile(lisp: &mut Lisp, arg: Object) -> LispResult {
                 cur_object = *b
             },
             Object::Nil => break,
-            _ => panic!("while doesn't accept dotted arguments"),
+            _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
         }
     }
 
@@ -277,7 +284,7 @@ fn lispwhile(lisp: &mut Lisp, arg: Object) -> LispResult {
 }
 
 // Evaluates the given object forever
-fn equal(lisp: &mut Lisp, arg: Object) -> LispResult {
+fn equal(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
     let first;
     let second;
     
@@ -291,14 +298,15 @@ fn equal(lisp: &mut Lisp, arg: Object) -> LispResult {
 
                     match *b {
                         Object::Nil => (),
-                        _ => panic!("== requires two arguments"),
+                        _ => return Err(RustFuncError::new_args_error(ArgumentsError::NotEnough)),
                     }
                 },
-                Object::Nil => panic!("== requires two arguments"),
-                _ => panic!("== doesn't accept dotted arguments"),
+                Object::Nil => return Err(RustFuncError::new_args_error(ArgumentsError::NotEnough)),
+                _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
             }
         },
-        _ => panic!("== requires two arguments"),
+        Object::Nil => return Err(RustFuncError::new_args_error(ArgumentsError::NotEnough)),
+        _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
     }; 
 
     if *lisp.eval_object(first)? == *lisp.eval_object(second)? {
@@ -309,7 +317,7 @@ fn equal(lisp: &mut Lisp, arg: Object) -> LispResult {
 }
 
 // Evaluates the given object forever
-fn notequal(lisp: &mut Lisp, arg: Object) -> LispResult {
+fn notequal(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
     let first;
     let second;
     
@@ -323,14 +331,15 @@ fn notequal(lisp: &mut Lisp, arg: Object) -> LispResult {
 
                     match *b {
                         Object::Nil => (),
-                        _ => panic!("!= requires two arguments"),
+                        _ => return Err(RustFuncError::new_args_error(ArgumentsError::NotEnough)),
                     }
                 },
-                Object::Nil => panic!("!= requires two arguments"),
-                _ => panic!("!= doesn't accept dotted arguments"),
+                Object::Nil => return Err(RustFuncError::new_args_error(ArgumentsError::NotEnough)),
+                _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
             }
         },
-        _ => panic!("!= requires two arguments"),
+        Object::Nil => return Err(RustFuncError::new_args_error(ArgumentsError::NotEnough)),
+        _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
     }; 
 
     if *lisp.eval_object(first)? != *lisp.eval_object(second)? {
@@ -341,30 +350,31 @@ fn notequal(lisp: &mut Lisp, arg: Object) -> LispResult {
 }
 
 // Returns whatever its given, used for when you don't want to evaluate something
-fn quote(_: &mut Lisp, arg: Object) -> LispResult {
+fn quote(_: &mut Lisp, arg: Object) -> RustFuncResult {
     match arg {
         Object::Pair(a, b) => {
             if *b != Object::Nil {
-                panic!("quote doesn't accept multiple arguments")
+                Err(RustFuncError::new_args_error(ArgumentsError::TooMany))
+            } else {
+                Ok(a)
             }
-            Ok(a)
         },
-        _ => panic!("quote doesn't accept dotted arguments"),
+        _ => Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
     }
 }
 
 // Exit lisp interpreter, number may be provided for exit code
-fn exit(lisp: &mut Lisp, arg: Object) -> LispResult {
+fn exit(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
     let exit_code = match arg {
         Object::Pair(a, b) => {
             if *b != Object::Nil {
-                panic!("exit doesn't accept multiple arguments")
+                return Err(RustFuncError::new_args_error(ArgumentsError::TooMany))
             }
 
             if let Object::Number(n) = *lisp.eval_object(a)? {
                 n
             } else {
-                panic!("exit requires number arguments");
+                return Err(RustFuncError::new_args_error(ArgumentsError::WrongType))
             }
         },
         _ => 0.0,
@@ -374,15 +384,15 @@ fn exit(lisp: &mut Lisp, arg: Object) -> LispResult {
 }
 
 // Display an object
-fn print(lisp: &mut Lisp, arg: Object) -> LispResult {
+fn print(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
     let a = match arg {
         Object::Pair(a, b) => {
             if *b != Object::Nil {
-                panic!("print doesn't accept multiple arguments")
+                return Err(RustFuncError::new_args_error(ArgumentsError::TooMany))
             }
             lisp.eval_object(a)?
         },
-        _ => panic!("print doesn't accept dotted arguments"),
+        _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
     };
 
     println!("{}", a);
@@ -391,21 +401,21 @@ fn print(lisp: &mut Lisp, arg: Object) -> LispResult {
 }
 
 // Reads a line into objects
-fn read(lisp: &mut Lisp, arg: Object) -> LispResult {
+fn read(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
     use std::io::{stdin, stdout, Write};
 
     let c = match arg {
         Object::Pair(a, b) => {
             if *b != Object::Nil {
-                panic!("read doesn't accept multiple arguments")
+                return Err(RustFuncError::new_args_error(ArgumentsError::TooMany))
             }
             match *lisp.eval_object(a)? {
                 Object::Character(c) => c,
-                _ => panic!("read doesn't accept non-characters")
+                _ => return Err(RustFuncError::new_args_error(ArgumentsError::WrongType)),
             }
         },
         Object::Nil => '>',
-        _ => panic!("read doesn't accept dotted arguments"),
+        _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
     };
 
     let stdin = stdin();
@@ -416,7 +426,7 @@ fn read(lisp: &mut Lisp, arg: Object) -> LispResult {
     stdout.flush().unwrap();
     
     stdin.read_line(&mut input).unwrap();
-    let objects = Object::eval(&input); // Evaluate tokens into objects
+    let objects = Object::eval(&input)?; // Evaluate tokens into objects
     let objects: Vec<Box<Object>> = objects.into_iter().map(Box::new).collect(); // Store objects on the heap
 
     // Read cannot return multiple objects, even if multiple objects were evaluated

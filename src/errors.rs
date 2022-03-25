@@ -2,7 +2,8 @@ use std::fmt;
 use std::error::Error;
 use crate::object::Object;
 
-pub type LispResult<'a> = Result<Box<Object>, LispError>;
+pub type LispResult = Result<Box<Object>, LispError>;
+pub type RustFuncResult = Result<Box<Object>, RustFuncError>;
 
 #[derive(Debug, Clone)]
 pub enum LispErrorKind {
@@ -32,7 +33,7 @@ impl fmt::Display for LispError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.kind {
             LispErrorKind::Parser => write!(f, "Error parsing code: {}", self.error),
-            LispErrorKind::Eval => write!(f, "Error evaluating objects: {}", self.error),
+            LispErrorKind::Eval => write!(f, "Error evaluating object: {}", self.error),
             LispErrorKind::RustFunc => write!(f, "Error running function: {}", self.error),
         }
     }
@@ -47,13 +48,15 @@ impl Error for LispError {
 #[derive(Debug, Clone)]
 pub enum ParserError {
     UnmatchedToken(char),
-    InvalidToken(char),
+    InvalidToken(String),
+    UnparsableAtom(String),
 }
 
 impl fmt::Display for ParserError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::UnmatchedToken(c) => write!(f, "Unmatched token: '{}'", c),
+            Self::UnparsableAtom(a) => write!(f, "Unparsable atom: {}", a),
             Self::InvalidToken(c) => write!(f, "Invalid token: '{}'", c),
         }
     }
@@ -70,17 +73,18 @@ pub enum EvalError {
 impl fmt::Display for EvalError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::UnknownSymbol(s) => write!(f, "Unknown symbol: '{}'", s),
-            Self::NonFunction(o) => write!(f, "Attempt to call non-function: '{}'", o),
+            Self::UnknownSymbol(s) => write!(f, "Unknown symbol: {}", s),
+            Self::NonFunction(o) => write!(f, "Attempt to call non-function: {}", o),
         }
     }
 }
 
 impl Error for EvalError {}
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum RustFuncError {
     InvalidArguments(ArgumentsError),
+    LispError(LispError),
 }
 
 impl RustFuncError {
@@ -92,7 +96,8 @@ impl RustFuncError {
 impl fmt::Display for RustFuncError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::InvalidArguments(e) => write!(f, "Invalid arguments: {}", e)
+            Self::InvalidArguments(e) => write!(f, "Invalid arguments: {}", e),
+            Self::LispError(e) => write!(f, "{}", e),
         }
     }
 }
@@ -100,10 +105,18 @@ impl fmt::Display for RustFuncError {
 impl Error for RustFuncError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            Self::InvalidArguments(e) => Some(e)
+            Self::InvalidArguments(e) => Some(e),
+            Self::LispError(e) => Some(e),
         }
     }
 }
+
+impl From<LispError> for RustFuncError {
+    fn from(error: LispError) -> Self {
+        Self::LispError(error)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum ArgumentsError {
     TooMany,

@@ -10,19 +10,19 @@ pub enum Object {
     Symbol(String),
     Number(f32),
     Character(char),
-    RustFunc(fn (&mut Lisp, Object) -> LispResult),
+    RustFunc(fn (&mut Lisp, Object) -> RustFuncResult),
 }
 
 impl Object {
-    fn parse_atom(string: &str) -> Self {
+    fn parse_atom(string: &str) -> Result<Object, LispError> {
         if let Ok(i) = str::parse::<f32>(string) {
-            Self::Number(i)
+            Ok(Self::Number(i))
         } else if string.len() == 2 && string.starts_with('\\') {
-            Self::Character(string.chars().nth(1).unwrap())
+            Ok(Self::Character(string.chars().nth(1).unwrap()))
         } else if !string.is_empty() {
-            Self::Symbol(string.to_string())
+            Ok(Self::Symbol(string.to_string()))
         } else {
-            panic!("Unparsable atom");
+            Err(LispError::new(LispErrorKind::Parser, ParserError::UnparsableAtom(string.to_string())))
         }
     }
 
@@ -56,26 +56,27 @@ impl Object {
         ret
     }
 
-    fn iter_to_object(strings: &mut dyn Iterator<Item = String>) -> Self {
+    fn iter_to_object(strings: &mut dyn Iterator<Item = String>) -> Result<Object, LispError> {
         let mut list = Vec::new();
         let mut dot_occured = false;
 
-        loop {
+        Ok(loop {
             match strings.next() {
                 Some(s) => match s.as_str() {
                     "(" => {
                         if dot_occured {
                             let mut list = Self::array_to_pair_list(list);
  
-                            list.append_to_pair_list(Self::iter_to_object(strings));
+                            list.append_to_pair_list(Self::iter_to_object(strings)?);
 
-                            if strings.next() != Some(")".to_string()) {
-                                panic!("Unexpected object after dotted list end")
+                            let next = strings.next().unwrap();
+                            if next != ")".to_string() {
+                                return Err(LispError::new(LispErrorKind::Parser, ParserError::InvalidToken(next)));
                             }
 
                             break list;
                         } else {
-                            list.push(Self::iter_to_object(strings))
+                            list.push(Self::iter_to_object(strings)?)
                         }
                     },
                     ")" => {
@@ -89,7 +90,7 @@ impl Object {
                         if !list.is_empty() {
                             dot_occured = true
                         } else {
-                            panic!("Expected object before '.'")
+                            return Err(LispError::new(LispErrorKind::Parser, ParserError::InvalidToken(".".to_string())));
                         }
                     },
                     s => {
@@ -97,36 +98,36 @@ impl Object {
                             if strings.next() == Some(")".to_string()) {
                                 let mut list = Self::array_to_pair_list(list);
  
-                                list.append_to_pair_list(Self::parse_atom(s));
+                                list.append_to_pair_list(Self::parse_atom(s)?);
 
                                 break list;
                             } else {
-                                panic!("Unexpected object after dotted list end")
+                                return Err(LispError::new(LispErrorKind::Parser, ParserError::InvalidToken(s.to_string())));
                             }
                         } else {
-                            list.push(Self::parse_atom(s));
+                            list.push(Self::parse_atom(s)?);
                         }
                     },
                 },
-                None => panic!("Unmatched '('"),
+                None => return Err(LispError::new(LispErrorKind::Parser, ParserError::UnmatchedToken('('))),
             }
-        }
+        })
     }
 
-    fn eval_strings(strings: Vec<String>) -> Vec<Self> {
+    fn eval_strings(strings: Vec<String>) -> Result<Vec<Object>, LispError> {
         let mut iter = strings.into_iter();
         let mut ret = Vec::new();
 
         loop {
             match iter.next() {
                 Some(s) => ret.push(match s.as_str() {
-                    "(" => Self::iter_to_object(&mut iter),
-                    ")" => panic!("Unmatched ')'"),
-                    "." => panic!("Invalid '.'"),
-                    s => Object::parse_atom(s),
+                    "(" => Self::iter_to_object(&mut iter)?,
+                    ")" => return Err(LispError::new(LispErrorKind::Parser, ParserError::UnmatchedToken(')'))),
+                    "." => return Err(LispError::new(LispErrorKind::Parser, ParserError::InvalidToken(".".to_string()))),
+                    s => Object::parse_atom(s)?,
                 }),
 
-                None => break ret,
+                None => break Ok(ret),
             }
         }
     }
@@ -147,7 +148,7 @@ impl Object {
             .collect()
     }
 
-    pub fn eval(input: &str) -> Vec<Self> {
+    pub fn eval(input: &str) -> Result<Vec<Object>, LispError> {
         let strings = Self::split_into_strings(input);
         Self::eval_strings(strings)
     }

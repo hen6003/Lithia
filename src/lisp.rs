@@ -19,7 +19,7 @@ impl Lisp {
         self
     }
     
-    pub fn add_func(&mut self, name: &str, func: fn (&mut Self, Object) -> LispResult) -> &mut Self {
+    pub fn add_func(&mut self, name: &str, func: fn (&mut Self, Object) -> RustFuncResult) -> &mut Self {
         self.add_var(name, Box::new(Object::RustFunc(func)))
     } 
    
@@ -47,8 +47,12 @@ impl Lisp {
         match *object {
             Object::Pair(f, a) => { // Execute function
                 match *self.eval_object(f)? {
-                    Object::RustFunc(f) => f(self, *a),
-                    _ => panic!("Object was not a function")
+                    Object::RustFunc(f) => match f(self, *a) {
+                        Ok(x) => Ok(x),
+                        Err(e) => Err(LispError::new(LispErrorKind::RustFunc, e)),
+                    },
+                    o => Err(LispError::new(LispErrorKind::Eval,
+                                            EvalError::NonFunction(o))) 
                 }
             },
             Object::Symbol(s) => Ok(self.eval_symbol(&s)?),
@@ -67,7 +71,7 @@ impl Lisp {
     }
 
     pub fn eval(&mut self, input: &str) -> LispResult {
-        let objects = Object::eval(input); // Evaluate tokens into objects
+        let objects = Object::eval(input)?; // Evaluate tokens into objects
         let objects = objects.into_iter().map(Box::new).collect(); // Store objects on the heap
 
         self.eval_objects(objects)
