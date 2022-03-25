@@ -70,7 +70,7 @@ impl Object {
                             list.append_to_pair_list(Self::iter_to_object(strings)?);
 
                             let next = strings.next().unwrap();
-                            if next != ")".to_string() {
+                            if next != *")" {
                                 return Err(LispError::new(LispErrorKind::Parser, ParserError::InvalidToken(next)));
                             }
 
@@ -120,12 +120,14 @@ impl Object {
 
         loop {
             match iter.next() {
-                Some(s) => ret.push(match s.as_str() {
-                    "(" => Self::iter_to_object(&mut iter)?,
+                Some(s) => match s.as_str() {
+                    "(" => ret.push(Self::iter_to_object(&mut iter)?),
                     ")" => return Err(LispError::new(LispErrorKind::Parser, ParserError::UnmatchedToken(')'))),
                     "." => return Err(LispError::new(LispErrorKind::Parser, ParserError::InvalidToken(".".to_string()))),
-                    s => Object::parse_atom(s)?,
-                }),
+                    s => if s.chars().next() != Some(';') {
+                        ret.push(Object::parse_atom(s)?);
+                    },
+                },
 
                 None => break Ok(ret),
             }
@@ -133,7 +135,7 @@ impl Object {
     }
 
     fn split_into_strings(input: &str) -> Vec<String> {
-        let regex = Regex::new(r"(?m)\(|\)|[^\s()]*").unwrap();
+        let regex = Regex::new(r"(?m);[^\n]*|\(|\)|[^\s()]*").unwrap();
  
         regex.captures_iter(input)
             .filter_map(|x| {

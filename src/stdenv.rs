@@ -7,6 +7,7 @@ impl Lisp {
         // Variables
         self.add_var("nil", Box::new(Object::Nil));
         self.add_var("t", Box::new(Object::True));
+        self.add_var("pi", Box::new(Object::Number(std::f32::consts::PI)));
         
         // Functions
         self.add_func("quote", quote);
