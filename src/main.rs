@@ -5,7 +5,7 @@ mod errors;
 
 use std::env;
 use std::fs;
-use lisp::Lisp;
+use lisp::LispScope;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -13,10 +13,10 @@ fn main() {
     let code = if args.len() > 1 {
         fs::read_to_string(&args[1]).unwrap()
     } else {
-        "(loop (print (eval (read))))".to_string()
+        "(while t (print (eval (read))))".to_string()
     };
 
-    let ret = Lisp::new()
+    let ret = LispScope::new(None)
         .add_stdenv()
         .eval(&code);
 

@@ -3,14 +3,16 @@ use std::collections::HashMap;
 use crate::object::Object;
 use crate::errors::*;
 
-pub struct Lisp {
+pub struct LispScope<'a> {
     variables: HashMap<String, Box<Object>>,
+    inherit: Option<&'a LispScope<'a>>,
 }
 
-impl Lisp {
-    pub fn new() -> Self {
+impl<'a> LispScope<'a> {
+    pub fn new(inherit: Option<&'a LispScope>) -> Self {
         Self {
             variables: HashMap::new(),
+	    inherit,
         }
     }
 
@@ -19,16 +21,21 @@ impl Lisp {
         self
     }
     
-    pub fn add_func(&mut self, name: &str, func: fn (&mut Self, Object) -> RustFuncResult) -> &mut Self {
+    pub fn add_func(&mut self, name: &str, func: fn (&mut LispScope, Object) -> RustFuncResult) -> &mut Self {
         self.add_var(name, Box::new(Object::RustFunc(func)))
     } 
    
-    fn eval_symbol(&mut self, symbol: &str) -> LispResult {
+    fn eval_symbol(&self, symbol: &str) -> LispResult {
         if !symbol.is_empty() {
             match self.variables.get(symbol) {
                 Some(s) => Ok(s.clone()),
-                None => Err(LispError::new(LispErrorKind::Eval,
-                                           EvalError::UnknownSymbol(symbol.to_string())))
+		// Check inherited variables
+                None => if let Some(i) = self.inherit {
+		    i.eval_symbol(symbol)
+		} else {
+		    Err(LispError::new(LispErrorKind::Eval,
+				       EvalError::UnknownSymbol(symbol.to_string())))
+		}
             }
         } else {
             Ok(Box::new(Object::Nil))
@@ -45,12 +52,42 @@ impl Lisp {
 
     pub fn eval_object(&mut self, object: Box<Object>) -> LispResult {
         match *object {
-            Object::Pair(f, a) => { // Execute function
+            Object::Pair(f, a) => { // Execute expression
                 match *self.eval_object(f)? {
                     Object::RustFunc(f) => match f(self, *a) {
                         Ok(x) => Ok(x),
                         Err(e) => Err(LispError::new(LispErrorKind::RustFunc, e)),
                     },
+		    Object::LispFunc(p, b) => {
+			let mut args = Vec::new();
+			let objects = b.into_iter().map(Box::new).collect(); // Store objects on the heap
+
+			// Create args
+			let mut cur_object = *a;
+			
+			loop {
+	    		    match cur_object {
+	    			Object::Pair(a, b) => {
+	    			    args.push(self.eval_object(a)?);
+				    
+	    			    cur_object = *b
+	    			},
+	    			Object::Nil => break,
+	    			_ => return Err(LispError::new(LispErrorKind::RustFunc, RustFuncError::new_args_error(ArgumentsError::DottedPair))),
+	    		    }
+			}
+
+			let mut scope = LispScope::new(Some(self));
+
+			for (i, p) in p.iter().enumerate() {
+			    match args.get(i) {
+				Some(a) => scope.add_var(p, a.clone()),
+				None => return Err(LispError::new(LispErrorKind::RustFunc, RustFuncError::new_args_error(ArgumentsError::NotEnough))),
+			    };
+			}
+
+			scope.eval_objects(objects)
+		    },
                     o => Err(LispError::new(LispErrorKind::Eval,
                                             EvalError::NonFunction(o))) 
                 }

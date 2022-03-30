@@ -1,5 +1,5 @@
 use regex::Regex;
-use crate::Lisp;
+use crate::LispScope;
 use crate::errors::*;
 
 #[derive(Clone)]
@@ -10,7 +10,8 @@ pub enum Object {
     Symbol(String),
     Number(f32),
     Character(char),
-    RustFunc(fn (&mut Lisp, Object) -> RustFuncResult),
+    RustFunc(fn (&mut LispScope, Object) -> RustFuncResult),
+    LispFunc(Vec<String>, Vec<Object>),
 }
 
 impl Object {
@@ -124,7 +125,7 @@ impl Object {
                     "(" => ret.push(Self::iter_to_object(&mut iter)?),
                     ")" => return Err(LispError::new(LispErrorKind::Parser, ParserError::UnmatchedToken(')'))),
                     "." => return Err(LispError::new(LispErrorKind::Parser, ParserError::InvalidToken(".".to_string()))),
-                    s => if s.chars().next() != Some(';') {
+                    s => if !s.starts_with(';') { // Ignore comments
                         ret.push(Object::parse_atom(s)?);
                     },
                 },
@@ -173,9 +174,10 @@ impl fmt::Debug for Object {
             Self::Number(i) => write!(f, "{}", i),
             Self::Character(c) => write!(f, "\\{}", c),
             Self::Symbol(s) => write!(f, "{}", s),
-            Self::RustFunc(x) => write!(f, "{:p}", x),
             Self::Nil => write!(f, "()"),
             Self::True => write!(f, "t"),
+            Self::RustFunc(x) => write!(f, "{:p}", x),
+	    Self::LispFunc(a, _) => write!(f, "({})", a.join(" ")),
         }
     }
 }
@@ -208,6 +210,7 @@ impl PartialEq for Object {
                 _ => false,
             },
             Self::RustFunc(_) => false,
+	    Self::LispFunc(_,_) => false,
             Self::Nil => matches!(other, Self::Nil),
             Self::True => matches!(other, Self::True),
         }
