@@ -24,6 +24,7 @@ impl<'a> LispScope<'a> {
         self.add_func("-", minus);
         self.add_func("*", times);
         self.add_func("/", divide);
+        self.add_func("%", modulus);
         self.add_func("==", equal);
         self.add_func("!=", notequal);
         
@@ -33,12 +34,45 @@ impl<'a> LispScope<'a> {
         self.add_func("sub", minus);
         self.add_func("mul", times);
         self.add_func("div", divide);
+        self.add_func("mod", modulus);
         self.add_func("eq", equal);
         self.add_func("ne", notequal);
 
         self
     }
 }
+
+fn modulus(lisp: &mut LispScope, arg: Object) -> RustFuncResult {
+    let mut sum;
+    let mut cur_object: Object = match arg {
+        Object::Pair(a, b) => {
+            sum = match *lisp.eval_object(a)? {
+                Object::Number(i) => i,
+                _ => return Err(RustFuncError::new_args_error(ArgumentsError::WrongType)),
+            };
+
+            *b
+        },
+        Object::Nil => return Err(RustFuncError::new_args_error(ArgumentsError::NotEnough)),
+        _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
+    };
+    
+    loop {
+        match cur_object {
+            Object::Pair(a, b) => {
+                sum %= match *lisp.eval_object(a)? {
+                    Object::Number(i) => i,
+                    _ => return Err(RustFuncError::new_args_error(ArgumentsError::WrongType)),
+                };
+
+                cur_object = *b
+            },
+            Object::Nil => break Ok(Box::new(Object::Number(sum))),
+            _ => break Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
+        }
+    }
+}
+
 
 fn divide(lisp: &mut LispScope, arg: Object) -> RustFuncResult {
     let mut sum;
