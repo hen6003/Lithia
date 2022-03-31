@@ -175,10 +175,7 @@ impl Object {
 use std::fmt;
 impl fmt::Display for Object {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Nil => write!(f, ""), // If Nil on its own, don't display anything
-            a => write!(f, "{:?}", a),
-        }
+        write!(f, "{:?}", self)
     }
 }
 

@@ -18,6 +18,11 @@ impl<'a> LispScope<'a> {
         self.add_func("read", read);
         self.add_func("func", func);
 
+        self.add_func("first", car);
+        self.add_func("next", cdr);
+        self.add_func("car", car);
+        self.add_func("cdr", cdr);
+
         // Math functions
         self.add_func("=", set);
         self.add_func("+", add);
@@ -364,6 +369,7 @@ fn quote(_: &mut LispScope, arg: Object) -> RustFuncResult {
                 Ok(a)
             }
         },
+	Object::Nil => Err(RustFuncError::new_args_error(ArgumentsError::NotEnough)),
         _ => Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
     }
 }
@@ -449,7 +455,6 @@ fn func(_: &mut LispScope, arg: Object) -> RustFuncResult {
 
     match arg {
         Object::Pair(a, b) => {
-
 	    match *a {
 		Object::Pair(_,_) => lisp_list_args = a,
 		Object::Nil => lisp_list_args = a,
@@ -493,4 +498,40 @@ fn func(_: &mut LispScope, arg: Object) -> RustFuncResult {
     }
 
     Ok(Box::new(Object::LispFunc(args, func_body)))
+}
+
+// Get first item in a list
+fn car(lisp: &mut LispScope, arg: Object) -> RustFuncResult {
+    match arg {
+        Object::Pair(a, b) => {
+	    if *b != Object::Nil {
+		return Err(RustFuncError::new_args_error(ArgumentsError::TooMany))
+	    }
+
+	    match *lisp.eval_object(a)? {
+		Object::Pair(a, _) => Ok(a),
+		_ => Err(RustFuncError::new_args_error(ArgumentsError::WrongType)),
+	    }
+	},
+	Object::Nil => Err(RustFuncError::new_args_error(ArgumentsError::NotEnough)),
+        _ => Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
+    }
+}
+
+// Get next item in a list
+fn cdr(lisp: &mut LispScope, arg: Object) -> RustFuncResult {
+    match arg {
+        Object::Pair(a, b) => {
+	    if *b != Object::Nil {
+		return Err(RustFuncError::new_args_error(ArgumentsError::TooMany))
+	    }
+
+	    match *lisp.eval_object(a)? {
+		Object::Pair(_, b) => Ok(b),
+		_ => Err(RustFuncError::new_args_error(ArgumentsError::WrongType)),
+	    }
+	},
+	Object::Nil => Err(RustFuncError::new_args_error(ArgumentsError::NotEnough)),
+        _ => Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
+    }
 }

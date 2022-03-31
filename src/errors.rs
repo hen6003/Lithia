@@ -34,7 +34,7 @@ impl fmt::Display for LispError {
         match self.kind {
             LispErrorKind::Parser => write!(f, "Error parsing code: {}", self.error),
             LispErrorKind::Eval => write!(f, "Error evaluating object: {}", self.error),
-            LispErrorKind::RustFunc => write!(f, "Error running function: {}", self.error),
+            LispErrorKind::RustFunc => write!(f, "{}", self.error),
         }
     }
 }
@@ -96,7 +96,7 @@ impl RustFuncError {
 impl fmt::Display for RustFuncError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::InvalidArguments(e) => write!(f, "Invalid arguments: {}", e),
+            Self::InvalidArguments(e) => write!(f, "Error running function: Invalid arguments: {}", e),
             Self::LispError(e) => write!(f, "{}", e),
         }
     }
