@@ -24,7 +24,13 @@ impl Object {
 	    let mut string = string.to_string();
 	    string.pop();
 
-	    let objects = string.chars().map(|c| Object::Character(c)).collect();
+	    //TODO handle escape codes
+
+	    let objects = string
+		.chars()
+		.skip(1)
+		.map(Object::Character)
+		.collect();
 
 	    Ok(Self::array_to_pair_list(objects))
         } else if !string.is_empty() {
@@ -114,10 +120,8 @@ impl Object {
                             } else {
                                 return Err(LispError::new(LispErrorKind::Parser, ParserError::InvalidToken(s.to_string())));
                             }
-                        } else {
-			    if !s.starts_with(';') { // Ignore comments
-				list.push(Object::parse_atom(s)?);
-			    }
+                        } else if !s.starts_with(';') { // Ignore comments
+			    list.push(Object::parse_atom(s)?);
                         }
                     },
                 },
@@ -181,7 +185,78 @@ impl fmt::Display for Object {
 impl fmt::Debug for Object {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Pair(a, b) => write!(f, "({:?} . {:?})", a, b),
+            Self::Pair(a, b) => {
+		let mut string = true;
+		let mut objects = Vec::new();
+		let mut cur_object = self;
+		
+		loop {
+		    match cur_object {
+			Self::Pair(a, b) => {
+			    objects.push(a);
+
+			    match **a {
+				Self::Character(_) => (),
+				_ => string = false,
+			    }
+
+			    cur_object = b;
+			},
+			Self::Nil => break,
+			c => return if objects.len() == 0 {
+			    write!(f, "({:?} . {:?})", a, b)
+			} else {
+			    write!(f, "(")?;
+
+			    let mut objects = objects.iter();
+
+			    match objects.next() {
+		    		Some(o) => {
+		    		    write!(f, "{}", o)?;
+
+		    		    for o in objects {	
+		    			write!(f, " {}", o)?;
+		    		    }
+		    		},
+		    		None => (),
+			    }
+
+			    write!(f, " . {})", c)
+			},
+		    }
+		}
+
+		if string {
+		    let mut string = String::new();
+
+		    for o in objects {
+			if let Self::Character(c) = **o {
+			    string.push(c);
+			} else {
+			    panic!("Unexpected type in string");
+			}
+		    }
+
+		    write!(f, "\"{}\"", string)
+		} else {
+		    write!(f, "(")?;
+
+		    let mut objects = objects.iter();
+
+		    match objects.next() {
+			Some(o) => {
+			    write!(f, "{}", o)?;
+
+			    for o in objects {	
+				write!(f, " {}", o)?;
+			    }
+			},
+			None => (),
+		    }
+
+		    write!(f, ")")
+		}
+	    },
             Self::Number(i) => write!(f, "{}", i),
             Self::Character(c) => write!(f, "\\{}", c),
             Self::Symbol(s) => write!(f, "{}", s),

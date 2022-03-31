@@ -70,7 +70,7 @@ impl<'a> LispScope<'a> {
 	    			Object::Pair(a, b) => {
 	    			    args.push(self.eval_object(a.clone())?);
 				    
-	    			    cur_object = &b
+	    			    cur_object = b
 	    			},
 	    			Object::Nil => break,
 	    			_ => return Err(LispError::new(LispErrorKind::RustFunc, RustFuncError::new_args_error(ArgumentsError::DottedPair))),
