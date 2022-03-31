@@ -99,14 +99,18 @@ impl Object {
                             if strings.next() == Some(")".to_string()) {
                                 let mut list = Self::array_to_pair_list(list);
  
-                                list.append_to_pair_list(Self::parse_atom(s)?);
+				if !s.starts_with(';') { // Ignore comments
+			    	    list.append_to_pair_list(Object::parse_atom(s)?);
+				}
 
                                 break list;
                             } else {
                                 return Err(LispError::new(LispErrorKind::Parser, ParserError::InvalidToken(s.to_string())));
                             }
                         } else {
-                            list.push(Self::parse_atom(s)?);
+			    if !s.starts_with(';') { // Ignore comments
+				list.push(Object::parse_atom(s)?);
+			    }
                         }
                     },
                 },

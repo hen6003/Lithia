@@ -11,4 +11,4 @@
 	     (* a i)))
 
 ;; Run lcm function and print result
-(print (lcm 432 20))
+(print (lcm 43 322))
