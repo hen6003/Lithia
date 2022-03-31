@@ -77,7 +77,11 @@ impl<'a> LispScope<'a> {
 	    		    }
 			}
 
-			let mut scope = LispScope::new(Some(self));
+			let mut scope = if self.inherit == None {
+			    LispScope::new(Some(self));
+			} else {
+			    LispScope::new(self.inherit);
+			};   
 
 			for (i, p) in p.iter().enumerate() {
 			    match args.get(i) {
@@ -86,6 +90,7 @@ impl<'a> LispScope<'a> {
 			    };
 			}
 
+			// Call function
 			scope.eval_objects(objects)
 		    },
                     o => Err(LispError::new(LispErrorKind::Eval,
