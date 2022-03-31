@@ -15,11 +15,18 @@ pub enum Object {
 }
 
 impl Object {
-    fn parse_atom(string: &str) -> Result<Object, LispError> {
+    fn parse_atom(string: &str) -> Result<Self, LispError> {
         if let Ok(i) = str::parse::<f32>(string) {
             Ok(Self::Number(i))
         } else if string.len() == 2 && string.starts_with('\\') {
             Ok(Self::Character(string.chars().nth(1).unwrap()))
+	} else if string.starts_with('"') && string.ends_with('"') {
+	    let mut string = string.to_string();
+	    string.pop();
+
+	    let objects = string.chars().map(|c| Object::Character(c)).collect();
+
+	    Ok(Self::array_to_pair_list(objects))
         } else if !string.is_empty() {
             Ok(Self::Symbol(string.to_string()))
         } else {
@@ -140,7 +147,7 @@ impl Object {
     }
 
     fn split_into_strings(input: &str) -> Vec<String> {
-        let regex = Regex::new(r"(?m);[^\n]*|\(|\)|[^\s()]*").unwrap();
+        let regex = Regex::new(r#"(?m);[^\n]*|"(?:\\.|[^"\\])*"|\(|\)|[^\s()]*"#).unwrap();
  
         regex.captures_iter(input)
             .filter_map(|x| {

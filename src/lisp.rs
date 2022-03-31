@@ -52,9 +52,9 @@ impl<'a> LispScope<'a> {
 
     pub fn eval_object(&mut self, object: Box<Object>) -> LispResult {
         match *object {
-            Object::Pair(f, a) => { // Execute expression
-                match *self.eval_object(f)? {
-                    Object::RustFunc(f) => match f(self, *a) {
+            Object::Pair(ref f, ref a) => { // Execute expression
+                match *self.eval_object(f.clone())? {
+                    Object::RustFunc(f) => match f(self, *a.clone()) {
                         Ok(x) => Ok(x),
                         Err(e) => Err(LispError::new(LispErrorKind::RustFunc, e)),
                     },
@@ -63,14 +63,14 @@ impl<'a> LispScope<'a> {
 			let objects = b.into_iter().map(Box::new).collect(); // Store objects on the heap
 
 			// Create args
-			let mut cur_object = *a;
+			let mut cur_object = a;
 			
 			loop {
-	    		    match cur_object {
+	    		    match &**cur_object {
 	    			Object::Pair(a, b) => {
-	    			    args.push(self.eval_object(a)?);
+	    			    args.push(self.eval_object(a.clone())?);
 				    
-	    			    cur_object = *b
+	    			    cur_object = &b
 	    			},
 	    			Object::Nil => break,
 	    			_ => return Err(LispError::new(LispErrorKind::RustFunc, RustFuncError::new_args_error(ArgumentsError::DottedPair))),
@@ -92,6 +92,7 @@ impl<'a> LispScope<'a> {
 			// Call function
 			scope.eval_objects(objects)
 		    },
+		    Object::Character(_) => Ok(object),
                     o => Err(LispError::new(LispErrorKind::Eval,
                                             EvalError::NonFunction(o))) 
                 }
