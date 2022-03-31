@@ -77,10 +77,9 @@ impl<'a> LispScope<'a> {
 	    		    }
 			}
 
-			let mut scope = if self.inherit == None {
-			    LispScope::new(Some(self));
-			} else {
-			    LispScope::new(self.inherit);
+			let mut scope = match self.inherit {
+			    Some(_) => LispScope::new(self.inherit),
+			    None => LispScope::new(Some(self)),
 			};   
 
 			for (i, p) in p.iter().enumerate() {
