@@ -3,6 +3,8 @@ mod object;
 mod stdenv;
 mod errors;
 
+use std::collections::HashMap;
+
 use std::env;
 use std::fs;
 use lisp::LispScope;
@@ -16,7 +18,8 @@ fn main() {
         "(while t (print (eval (read))))".to_string()
     };
 
-    let ret = LispScope::new(None)
+    let mut globals = HashMap::new();
+    let ret = LispScope::new(&mut globals, None)
         .add_stdenv()
         .eval(&code);
 

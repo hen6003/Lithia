@@ -5,24 +5,30 @@ use crate::errors::*;
 
 pub struct LispScope<'a> {
     variables: HashMap<String, Box<Object>>,
+    globals: &'a mut HashMap<String, Box<Object>>,
     inherit: Option<&'a LispScope<'a>>,
 }
 
 impl<'a> LispScope<'a> {
-    pub fn new(inherit: Option<&'a LispScope>) -> Self {
+    pub fn new(globals: &'a mut HashMap<String, Box<Object>>, inherit: Option<&'a LispScope>) -> Self {
         Self {
             variables: HashMap::new(),
+	    globals,
 	    inherit,
         }
     }
 
-    pub fn add_var(&mut self, name: &str, object: Box<Object>) -> &mut Self {
-        self.variables.insert(name.to_string(), object);
+    pub fn add_var(&mut self, global: bool, name: &str, object: Box<Object>) -> &mut Self {
+	if global {
+            self.globals.insert(name.to_string(), object);
+	} else {
+            self.variables.insert(name.to_string(), object);
+	}
         self
     }
     
-    pub fn add_func(&mut self, name: &str, func: fn (&mut LispScope, Object) -> RustFuncResult) -> &mut Self {
-        self.add_var(name, Box::new(Object::RustFunc(func)))
+    pub fn add_func(&mut self, global: bool, name: &str, func: fn (&mut LispScope, Object) -> RustFuncResult) -> &mut Self {
+        self.add_var(global, name, Box::new(Object::RustFunc(func)))
     } 
    
     fn eval_symbol(&self, symbol: &str) -> LispResult {
@@ -30,11 +36,13 @@ impl<'a> LispScope<'a> {
             match self.variables.get(symbol) {
                 Some(s) => Ok(s.clone()),
 		// Check inherited variables
-                None => if let Some(i) = self.inherit {
-		    i.eval_symbol(symbol)
-		} else {
-		    Err(LispError::new(LispErrorKind::Eval,
-				       EvalError::UnknownSymbol(symbol.to_string())))
+                None => match self.inherit {
+		    Some(i) => i.eval_symbol(symbol),
+		    None => match self.globals.get(symbol) {
+			Some(s) => Ok(s.clone()),
+			None => Err(LispError::new(LispErrorKind::Eval,
+						   EvalError::UnknownSymbol(symbol.to_string()))),
+		    },
 		}
             }
         } else {
@@ -46,7 +54,7 @@ impl<'a> LispScope<'a> {
         if let Some(s) = self.variables.get_mut(symbol) {
             *s = data;
         } else {
-            self.add_var(symbol, data);
+            self.add_var(false, symbol, data);
         }
     }
 
@@ -77,14 +85,15 @@ impl<'a> LispScope<'a> {
 	    		    }
 			}
 
-			let mut scope = match self.inherit {
-			    Some(_) => LispScope::new(self.inherit),
-			    None => LispScope::new(Some(self)),
-			};   
+			//let mut scope = match self.inherit {
+			//    Some(_) => LispScope::new(self.inherit),
+			//    None => LispScope::new(Some(self)),
+			//};
+			let mut scope = LispScope::new(self.globals, None);
 
 			for (i, p) in p.iter().enumerate() {
 			    match args.get(i) {
-				Some(a) => scope.add_var(p, a.clone()),
+				Some(a) => scope.add_var(false, p, a.clone()),
 				None => return Err(LispError::new(LispErrorKind::RustFunc, RustFuncError::new_args_error(ArgumentsError::NotEnough))),
 			    };
 			}
