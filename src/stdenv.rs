@@ -5,43 +5,43 @@ use crate::errors::*;
 impl<'a> LispScope<'a> {
     pub fn add_stdenv(&mut self) -> &mut Self {
         // Variables
-        self.add_var(true, "nil", Box::new(Object::Nil));
-        self.add_var(true, "t", Box::new(Object::True));
-        self.add_var(true, "pi", Box::new(Object::Number(std::f32::consts::PI)));
+        self.add_var("nil", Box::new(Object::Nil));
+        self.add_var("t", Box::new(Object::True));
+        self.add_var("pi", Box::new(Object::Number(std::f32::consts::PI)));
         
         // Functions
-        self.add_func(true, "quote", quote);
-        self.add_func(true, "exit", exit);
-        self.add_func(true, "eval", eval);
-        self.add_func(true, "while", lispwhile);
-        self.add_func(true, "print", print);
-        self.add_func(true, "read", read);
-        self.add_func(true, "func", func);
+        self.add_func("quote", quote);
+        self.add_func("exit", exit);
+        self.add_func("eval", eval);
+        self.add_func("while", lispwhile);
+        self.add_func("print", print);
+        self.add_func("read", read);
+        self.add_func("func", func);
 
-        self.add_func(true, "first", car);
-        self.add_func(true, "next", cdr);
-        self.add_func(true, "car", car);
-        self.add_func(true, "cdr", cdr);
+        self.add_func("first", car);
+        self.add_func("next", cdr);
+        self.add_func("car", car);
+        self.add_func("cdr", cdr);
 
         // Math functions
-        self.add_func(true, "=", set);
-        self.add_func(true, "+", add);
-        self.add_func(true, "-", minus);
-        self.add_func(true, "*", times);
-        self.add_func(true, "/", divide);
-        self.add_func(true, "%", modulus);
-        self.add_func(true, "==", equal);
-        self.add_func(true, "!=", notequal);
+        self.add_func("=", set);
+        self.add_func("+", add);
+        self.add_func("-", minus);
+        self.add_func("*", times);
+        self.add_func("/", divide);
+        self.add_func("%", modulus);
+        self.add_func("==", equal);
+        self.add_func("!=", notequal);
         
         // Non-symbol names
-        self.add_func(true, "set", set);
-        self.add_func(true, "add", add);
-        self.add_func(true, "sub", minus);
-        self.add_func(true, "mul", times);
-        self.add_func(true, "div", divide);
-        self.add_func(true, "mod", modulus);
-        self.add_func(true, "eq", equal);
-        self.add_func(true, "ne", notequal);
+        self.add_func("set", set);
+        self.add_func("add", add);
+        self.add_func("sub", minus);
+        self.add_func("mul", times);
+        self.add_func("div", divide);
+        self.add_func("mod", modulus);
+        self.add_func("eq", equal);
+        self.add_func("ne", notequal);
 
         self
     }
@@ -285,6 +285,9 @@ fn lispwhile(lisp: &mut LispScope, arg: Object) -> RustFuncResult {
             _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
         }
     }
+
+    //let mut scope = LispScope::child(lisp);
+    //let mut scope = LispScope::new(None, Some(lisp));
 
     while *lisp.eval_object(cond.clone())? != Object::Nil {
         lisp.eval_objects(objects.clone())?;
