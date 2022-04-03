@@ -67,6 +67,7 @@ impl Error for ParserError {}
 #[derive(Debug, Clone)]
 pub enum EvalError {
     UnknownSymbol(String),
+    GlobalExists(String),
     NonFunction(Object),
 }
 
@@ -74,6 +75,7 @@ impl fmt::Display for EvalError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::UnknownSymbol(s) => write!(f, "Unknown symbol: {}", s),
+            Self::GlobalExists(s) => write!(f, "Global already exists: {}", s),
             Self::NonFunction(o) => write!(f, "Attempt to call non-function: {}", o),
         }
     }

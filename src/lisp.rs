@@ -26,18 +26,21 @@ impl<'a> Lisp<'a> {
 	self.scope.pop();
     }
 
-    pub fn add_var(&mut self, global: bool, name: &str, object: Box<Object>) -> &mut Self {
+    pub fn add_var(&mut self, global: bool, name: &str, object: Box<Object>) -> Result<&mut Self, LispError> {
 	if global {
-	    self.globals.insert(name.to_string(), object);
+	    match self.globals.get(name) {
+		Some(_) => return Err(LispError::new(LispErrorKind::Eval, EvalError::GlobalExists(name.to_string()))),
+		None => self.globals.insert(name.to_string(), object),
+	    }
 	} else {
 	    let len = self.scope.len();
-            self.scope[len-1].insert(name.to_string(), object);
-	}
+            self.scope[len-1].insert(name.to_string(), object)
+	};
 
-        self
+        Ok(self)
     }
     
-    pub fn add_func(&mut self, global: bool, name: &str, func: fn (&mut Lisp, Object) -> RustFuncResult) -> &mut Self {
+    pub fn add_func(&mut self, global: bool, name: &str, func: fn (&mut Lisp, Object) -> RustFuncResult) -> Result<&mut Self, LispError> {
         self.add_var(global, name, Box::new(Object::RustFunc(func)))
     } 
    
@@ -60,17 +63,19 @@ impl<'a> Lisp<'a> {
         }
     }
 
-    pub fn set_var(&mut self, symbol: &str, data: Box<Object>) {
+    pub fn set_var(&mut self, symbol: &str, data: Box<Object>) -> Result<(), LispError> {
 	// Check for variable, going up scope if it can't find it
 	for v in self.scope.iter_mut().rev() {
             if let Some(s) = v.get_mut(symbol) {
 		*s = data;
-		return
+		return Ok(())
 	    }
 	}
 
 	// If variable not found, create it
-        self.add_var(false, symbol, data);
+        self.add_var(false, symbol, data)?;
+
+	Ok(())
     }
 
     pub fn eval_object(&mut self, object: Box<Object>) -> LispResult {
@@ -106,7 +111,7 @@ impl<'a> Lisp<'a> {
 
 			for (i, p) in p.iter().enumerate() {
 			    match args.get(i) {
-				Some(a) => scope.add_var(false, p, a.clone()),
+				Some(a) => scope.add_var(false, p, a.clone())?,
 				None => return Err(LispError::new(LispErrorKind::RustFunc, RustFuncError::new_args_error(ArgumentsError::NotEnough))),
 			    };
 			}

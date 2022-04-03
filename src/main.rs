@@ -20,7 +20,7 @@ fn main() {
 
     let mut globals = HashMap::new();
     let ret = Lisp::new(&mut globals)
-        .add_stdenv()
+        .add_stdenv().unwrap()
         .eval(&code);
 
     match ret {

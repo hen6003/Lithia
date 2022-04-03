@@ -3,47 +3,50 @@ use crate::object::Object;
 use crate::errors::*;
 
 impl<'a> Lisp<'a> {
-    pub fn add_stdenv(&mut self) -> &mut Self {
+    pub fn add_stdenv(&mut self) -> Result<&mut Self, LispError> {
         // Variables
-        self.add_var(true, "nil", Box::new(Object::Nil));
-        self.add_var(true, "t", Box::new(Object::True));
-        self.add_var(true, "pi", Box::new(Object::Number(std::f32::consts::PI)));
+        self.add_var(true, "nil", Box::new(Object::Nil))?;
+        self.add_var(true, "t", Box::new(Object::True))?;
+        self.add_var(true, "pi", Box::new(Object::Number(std::f32::consts::PI)))?;
         
         // Functions
-        self.add_func(true, "quote", quote);
-        self.add_func(true, "exit", exit);
-        self.add_func(true, "eval", eval);
-        self.add_func(true, "while", lispwhile);
-        self.add_func(true, "print", print);
-        self.add_func(true, "read", read);
-        self.add_func(true, "func", func);
+        self.add_func(true, "quote", quote)?;
+        self.add_func(true, "exit", exit)?;
+        self.add_func(true, "eval", eval)?;
+        self.add_func(true, "while", lispwhile)?;
+        self.add_func(true, "print", print)?;
+        self.add_func(true, "read", read)?;
+        self.add_func(true, "func", func)?;
 
-        self.add_func(true, "first", car);
-        self.add_func(true, "next", cdr);
-        self.add_func(true, "car", car);
-        self.add_func(true, "cdr", cdr);
+        self.add_func(true, "first", car)?;
+        self.add_func(true, "next", cdr)?;
+        self.add_func(true, "car", car)?;
+        self.add_func(true, "cdr", cdr)?;
+	
+        self.add_func(true, "=", set)?;
+        self.add_func(true, "def", define)?;
+        self.add_func(true, "defunc", defunc)?;
 
         // Math functions
-        self.add_func(true, "=", set);
-        self.add_func(true, "+", add);
-        self.add_func(true, "-", minus);
-        self.add_func(true, "*", times);
-        self.add_func(true, "/", divide);
-        self.add_func(true, "%", modulus);
-        self.add_func(true, "==", equal);
-        self.add_func(true, "!=", notequal);
+        self.add_func(true, "+", add)?;
+        self.add_func(true, "-", minus)?;
+        self.add_func(true, "*", times)?;
+        self.add_func(true, "/", divide)?;
+        self.add_func(true, "%", modulus)?;
+        self.add_func(true, "==", equal)?;
+        self.add_func(true, "!=", notequal)?;
         
         // Non-symbol names
-        self.add_func(true, "set", set);
-        self.add_func(true, "add", add);
-        self.add_func(true, "sub", minus);
-        self.add_func(true, "mul", times);
-        self.add_func(true, "div", divide);
-        self.add_func(true, "mod", modulus);
-        self.add_func(true, "eq", equal);
-        self.add_func(true, "ne", notequal);
+        self.add_func(true, "set", set)?;
+        self.add_func(true, "add", add)?;
+        self.add_func(true, "sub", minus)?;
+        self.add_func(true, "mul", times)?;
+        self.add_func(true, "div", divide)?;
+        self.add_func(true, "mod", modulus)?;
+        self.add_func(true, "eq", equal)?;
+        self.add_func(true, "ne", notequal)?;
 
-        self
+        Ok(self)
     }
 }
 
@@ -224,7 +227,52 @@ fn set(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
 
     if let Object::Symbol(symbol) = *symbol {
         let data = lisp.eval_object(data)?;
-        lisp.set_var(&symbol, data);
+        lisp.set_var(&symbol, data)?;
+    } else {
+        return Err(RustFuncError::new_args_error(ArgumentsError::WrongType))
+    }
+
+    Ok(Box::new(Object::Nil))
+}
+
+// Define global
+fn define(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
+    let (symbol, data) = match arg {
+        Object::Pair(a, b) => {
+            match *b {
+                Object::Pair(c, d) => {
+                    if *d != Object::Nil {
+                        return Err(RustFuncError::new_args_error(ArgumentsError::NotEnough))
+                    }
+
+                    (a, c)
+                },
+                Object::Nil => return Err(RustFuncError::new_args_error(ArgumentsError::NotEnough)),
+                _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
+            }
+        },
+        _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
+    };
+
+    if let Object::Symbol(symbol) = *symbol {
+        let data = lisp.eval_object(data)?;
+        lisp.add_var(true, &symbol, data)?;
+    } else {
+        return Err(RustFuncError::new_args_error(ArgumentsError::WrongType))
+    }
+
+    Ok(Box::new(Object::Nil))
+}
+
+// Define global function
+fn defunc(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
+    let (symbol, function) = match arg {
+        Object::Pair(a, b) => (a, func(lisp, *b)?),
+        _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
+    };
+
+    if let Object::Symbol(symbol) = *symbol {
+        lisp.add_var(true, &symbol, function)?;
     } else {
         return Err(RustFuncError::new_args_error(ArgumentsError::WrongType))
     }
