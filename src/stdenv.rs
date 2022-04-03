@@ -1,53 +1,53 @@
-use crate::lisp::LispScope;
+use crate::lisp::Lisp;
 use crate::object::Object;
 use crate::errors::*;
 
-impl<'a> LispScope<'a> {
+impl<'a> Lisp<'a> {
     pub fn add_stdenv(&mut self) -> &mut Self {
         // Variables
-        self.add_var("nil", Box::new(Object::Nil));
-        self.add_var("t", Box::new(Object::True));
-        self.add_var("pi", Box::new(Object::Number(std::f32::consts::PI)));
+        self.add_var(true, "nil", Box::new(Object::Nil));
+        self.add_var(true, "t", Box::new(Object::True));
+        self.add_var(true, "pi", Box::new(Object::Number(std::f32::consts::PI)));
         
         // Functions
-        self.add_func("quote", quote);
-        self.add_func("exit", exit);
-        self.add_func("eval", eval);
-        self.add_func("while", lispwhile);
-        self.add_func("print", print);
-        self.add_func("read", read);
-        self.add_func("func", func);
+        self.add_func(true, "quote", quote);
+        self.add_func(true, "exit", exit);
+        self.add_func(true, "eval", eval);
+        self.add_func(true, "while", lispwhile);
+        self.add_func(true, "print", print);
+        self.add_func(true, "read", read);
+        self.add_func(true, "func", func);
 
-        self.add_func("first", car);
-        self.add_func("next", cdr);
-        self.add_func("car", car);
-        self.add_func("cdr", cdr);
+        self.add_func(true, "first", car);
+        self.add_func(true, "next", cdr);
+        self.add_func(true, "car", car);
+        self.add_func(true, "cdr", cdr);
 
         // Math functions
-        self.add_func("=", set);
-        self.add_func("+", add);
-        self.add_func("-", minus);
-        self.add_func("*", times);
-        self.add_func("/", divide);
-        self.add_func("%", modulus);
-        self.add_func("==", equal);
-        self.add_func("!=", notequal);
+        self.add_func(true, "=", set);
+        self.add_func(true, "+", add);
+        self.add_func(true, "-", minus);
+        self.add_func(true, "*", times);
+        self.add_func(true, "/", divide);
+        self.add_func(true, "%", modulus);
+        self.add_func(true, "==", equal);
+        self.add_func(true, "!=", notequal);
         
         // Non-symbol names
-        self.add_func("set", set);
-        self.add_func("add", add);
-        self.add_func("sub", minus);
-        self.add_func("mul", times);
-        self.add_func("div", divide);
-        self.add_func("mod", modulus);
-        self.add_func("eq", equal);
-        self.add_func("ne", notequal);
+        self.add_func(true, "set", set);
+        self.add_func(true, "add", add);
+        self.add_func(true, "sub", minus);
+        self.add_func(true, "mul", times);
+        self.add_func(true, "div", divide);
+        self.add_func(true, "mod", modulus);
+        self.add_func(true, "eq", equal);
+        self.add_func(true, "ne", notequal);
 
         self
     }
 }
 
-fn modulus(lisp: &mut LispScope, arg: Object) -> RustFuncResult {
+fn modulus(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
     let mut sum;
     let mut cur_object: Object = match arg {
         Object::Pair(a, b) => {
@@ -79,7 +79,7 @@ fn modulus(lisp: &mut LispScope, arg: Object) -> RustFuncResult {
 }
 
 
-fn divide(lisp: &mut LispScope, arg: Object) -> RustFuncResult {
+fn divide(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
     let mut sum;
     let mut cur_object: Object = match arg {
         Object::Pair(a, b) => {
@@ -110,7 +110,7 @@ fn divide(lisp: &mut LispScope, arg: Object) -> RustFuncResult {
     }
 }
 
-fn times(lisp: &mut LispScope, arg: Object) -> RustFuncResult {
+fn times(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
     let mut sum;
     let mut cur_object: Object = match arg {
         Object::Pair(a, b) => {
@@ -141,7 +141,7 @@ fn times(lisp: &mut LispScope, arg: Object) -> RustFuncResult {
     }
 }
 
-fn minus(lisp: &mut LispScope, arg: Object) -> RustFuncResult {
+fn minus(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
     let mut sum;
     let mut cur_object: Object = match arg {
         Object::Pair(a, b) => {
@@ -172,7 +172,7 @@ fn minus(lisp: &mut LispScope, arg: Object) -> RustFuncResult {
     }
 }
 
-fn add(lisp: &mut LispScope, arg: Object) -> RustFuncResult {
+fn add(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
     let mut sum;
     let mut cur_object: Object = match arg {
         Object::Pair(a, b) => {
@@ -204,7 +204,7 @@ fn add(lisp: &mut LispScope, arg: Object) -> RustFuncResult {
 }
 
 // Set variable
-fn set(lisp: &mut LispScope, arg: Object) -> RustFuncResult {
+fn set(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
     let (symbol, data) = match arg {
         Object::Pair(a, b) => {
             match *b {
@@ -233,7 +233,7 @@ fn set(lisp: &mut LispScope, arg: Object) -> RustFuncResult {
 }
 
 // Evaluate an object and what it returns
-fn eval(lisp: &mut LispScope, arg: Object) -> RustFuncResult {
+fn eval(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
     let mut objects = Vec::new();
     let mut cur_object: Object = match arg {
         Object::Pair(a, b) => {
@@ -261,7 +261,7 @@ fn eval(lisp: &mut LispScope, arg: Object) -> RustFuncResult {
 }
 
 // Evaluates the given object forever
-fn lispwhile(lisp: &mut LispScope, arg: Object) -> RustFuncResult {
+fn lispwhile(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
     let cond;
     let mut objects = Vec::new();
     let mut cur_object: Object = match arg {
@@ -286,18 +286,19 @@ fn lispwhile(lisp: &mut LispScope, arg: Object) -> RustFuncResult {
         }
     }
 
-    //let mut scope = LispScope::child(lisp);
-    //let mut scope = LispScope::new(None, Some(lisp));
+    lisp.scope_create();
 
     while *lisp.eval_object(cond.clone())? != Object::Nil {
         lisp.eval_objects(objects.clone())?;
     }
 
+    lisp.scope_end();
+
     Ok(Box::new(Object::Nil))
 }
 
 // Evaluates the given object forever
-fn equal(lisp: &mut LispScope, arg: Object) -> RustFuncResult {
+fn equal(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
     let first;
     let second;
     
@@ -330,7 +331,7 @@ fn equal(lisp: &mut LispScope, arg: Object) -> RustFuncResult {
 }
 
 // Evaluates the given object forever
-fn notequal(lisp: &mut LispScope, arg: Object) -> RustFuncResult {
+fn notequal(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
     let first;
     let second;
     
@@ -363,7 +364,7 @@ fn notequal(lisp: &mut LispScope, arg: Object) -> RustFuncResult {
 }
 
 // Returns whatever its given, used for when you don't want to evaluate something
-fn quote(_: &mut LispScope, arg: Object) -> RustFuncResult {
+fn quote(_: &mut Lisp, arg: Object) -> RustFuncResult {
     match arg {
         Object::Pair(a, b) => {
             if *b != Object::Nil {
@@ -378,7 +379,7 @@ fn quote(_: &mut LispScope, arg: Object) -> RustFuncResult {
 }
 
 // Exit lisp interpreter, number may be provided for exit code
-fn exit(lisp: &mut LispScope, arg: Object) -> RustFuncResult {
+fn exit(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
     let exit_code = match arg {
         Object::Pair(a, b) => {
             if *b != Object::Nil {
@@ -398,7 +399,7 @@ fn exit(lisp: &mut LispScope, arg: Object) -> RustFuncResult {
 }
 
 // Display an object
-fn print(lisp: &mut LispScope, arg: Object) -> RustFuncResult {
+fn print(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
     let a = match arg {
         Object::Pair(a, b) => {
             if *b != Object::Nil {
@@ -415,7 +416,7 @@ fn print(lisp: &mut LispScope, arg: Object) -> RustFuncResult {
 }
 
 // Reads a line into objects
-fn read(lisp: &mut LispScope, arg: Object) -> RustFuncResult {
+fn read(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
     use std::io::{stdin, stdout, Write};
 
     let c = match arg {
@@ -452,7 +453,7 @@ fn read(lisp: &mut LispScope, arg: Object) -> RustFuncResult {
 }
 
 // For creating functions
-fn func(_: &mut LispScope, arg: Object) -> RustFuncResult {
+fn func(_: &mut Lisp, arg: Object) -> RustFuncResult {
     let mut lisp_list_args;
     let mut func_body = Vec::new();
 
@@ -504,7 +505,7 @@ fn func(_: &mut LispScope, arg: Object) -> RustFuncResult {
 }
 
 // Get first item in a list
-fn car(lisp: &mut LispScope, arg: Object) -> RustFuncResult {
+fn car(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
     match arg {
         Object::Pair(a, b) => {
 	    if *b != Object::Nil {
@@ -522,7 +523,7 @@ fn car(lisp: &mut LispScope, arg: Object) -> RustFuncResult {
 }
 
 // Get next item in a list
-fn cdr(lisp: &mut LispScope, arg: Object) -> RustFuncResult {
+fn cdr(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
     match arg {
         Object::Pair(a, b) => {
 	    if *b != Object::Nil {

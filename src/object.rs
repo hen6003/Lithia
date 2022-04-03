@@ -1,5 +1,5 @@
 use regex::Regex;
-use crate::LispScope;
+use crate::Lisp;
 use crate::errors::*;
 
 #[derive(Clone)]
@@ -10,7 +10,7 @@ pub enum Object {
     Symbol(String),
     Number(f32),
     Character(char),
-    RustFunc(fn (&mut LispScope, Object) -> RustFuncResult),
+    RustFunc(fn (&mut Lisp, Object) -> RustFuncResult),
     LispFunc(Vec<String>, Vec<Object>),
 }
 

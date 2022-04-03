@@ -3,66 +3,78 @@ use std::collections::HashMap;
 use crate::object::Object;
 use crate::errors::*;
 
-pub struct LispScope<'a> {
-    variables: HashMap<String, Box<Object>>,
-    parent: Option<&'a LispScope<'a>>,
+pub struct Lisp<'a> {
+    scope: Vec<HashMap<String, Box<Object>>>,
+    globals: &'a mut HashMap<String, Box<Object>>,
 }
 
-impl<'a> LispScope<'a> {
-    pub fn new(parent: Option<&'a LispScope>) -> Self {
+impl<'a> Lisp<'a> {
+    pub fn new(globals: &'a mut HashMap<String, Box<Object>>) -> Self {
+	let mut scope = Vec::new();
+	scope.push(HashMap::new());
+
         Self {
-            variables: HashMap::new(),
-	    parent,
-        }
-    }
-
-    // Creates scope, only including globals
-    pub fn scope_func(parent: &'a LispScope) -> Self {
-	let mut globalscope = parent;
-
-	loop {
-	    match &globalscope.parent {
-		Some(_) => globalscope = globalscope.parent.as_ref().unwrap(),
-		None => break Self {
-		    variables: HashMap::new(),
-		    parent: Some(globalscope),
-		},
-	    }
+	    scope,
+	    globals,
 	}
     }
 
-    pub fn add_var(&mut self, name: &str, object: Box<Object>) -> &mut Self {
-        self.variables.insert(name.to_string(), object);
+    // New scope
+    pub fn scope_create(&mut self) {
+	self.scope.push(HashMap::new());
+    }
+
+    // End scope
+    pub fn scope_end(&mut self) {
+	self.scope.pop();
+    }
+
+    pub fn add_var(&mut self, global: bool, name: &str, object: Box<Object>) -> &mut Self {
+	if global {
+	    self.globals.insert(name.to_string(), object);
+	} else {
+	    let len = self.scope.len();
+            self.scope[len-1].insert(name.to_string(), object);
+	}
 
         self
     }
     
-    pub fn add_func(&mut self, name: &str, func: fn (&mut LispScope, Object) -> RustFuncResult) -> &mut Self {
-        self.add_var(name, Box::new(Object::RustFunc(func)))
+    pub fn add_func(&mut self, global: bool, name: &str, func: fn (&mut Lisp, Object) -> RustFuncResult) -> &mut Self {
+        self.add_var(global, name, Box::new(Object::RustFunc(func)))
     } 
    
     fn eval_symbol(&self, symbol: &str) -> LispResult {
         if !symbol.is_empty() {
-            match self.variables.get(symbol) {
-                Some(s) => Ok(s.clone()),
-		// Check inherited variables
-                None => match &self.parent {
-		    Some(i) => i.eval_symbol(symbol),
-		    None => Err(LispError::new(LispErrorKind::Eval,
-					       EvalError::UnknownSymbol(symbol.to_string()))),
+	    for s in self.scope.iter().rev() {
+		match s.get(symbol) {
+                    Some(o) => return Ok(o.clone()),
+                    None => (),
 		}
-            }
+	    }
+
+	    // Check globals
+	    match self.globals.get(symbol) {
+		Some(o) => Ok(o.clone()),
+		None => Err(LispError::new(LispErrorKind::Eval,
+					   EvalError::UnknownSymbol(symbol.to_string())))
+	    }
         } else {
             Ok(Box::new(Object::Nil))
         }
     }
 
     pub fn set_var(&mut self, symbol: &str, data: Box<Object>) {
-        if let Some(s) = self.variables.get_mut(symbol) {
-            *s = data;
-        } else {
-            self.add_var(symbol, data);
-        }
+	// Check for variable, going up scope if it can't find it
+	for v in self.scope.iter_mut().rev() {
+            if let Some(s) = v.get_mut(symbol) {
+		*s = data;
+		return
+	    }
+	}
+
+	// If variable not found, create it
+        self.add_var(false, symbol, data);
     }
 
     pub fn eval_object(&mut self, object: Box<Object>) -> LispResult {
@@ -70,8 +82,6 @@ impl<'a> LispScope<'a> {
             Object::Pair(ref f, ref a) => { // Execute expression
                 match *self.eval_object(f.clone())? {
                     Object::RustFunc(f) => {
-			//let mut scope = LispScope::new(self.globals, Some(self));
-
 			match f(self, *a.clone()) {
                             Ok(x) => Ok(x),
                             Err(e) => Err(LispError::new(LispErrorKind::RustFunc, e)),
@@ -96,11 +106,11 @@ impl<'a> LispScope<'a> {
 	    		    }
 			}
 
-			let mut scope = LispScope::scope_func(self);
-mut
+			let mut scope = Lisp::new(self.globals);
+
 			for (i, p) in p.iter().enumerate() {
 			    match args.get(i) {
-				Some(a) => scope.add_var(p, a.clone()),
+				Some(a) => scope.add_var(false, p, a.clone()),
 				None => return Err(LispError::new(LispErrorKind::RustFunc, RustFuncError::new_args_error(ArgumentsError::NotEnough))),
 			    };
 			}
