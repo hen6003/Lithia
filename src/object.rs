@@ -200,22 +200,19 @@ impl fmt::Debug for Object {
 			    cur_object = b;
 			},
 			Self::Nil => break,
-			c => return if objects.len() == 0 {
+			c => return if objects.is_empty() {
 			    write!(f, "({:?} . {:?})", a, b)
 			} else {
 			    write!(f, "(")?;
 
 			    let mut objects = objects.iter();
 
-			    match objects.next() {
-		    		Some(o) => {
-		    		    write!(f, "{}", o)?;
+			    if let Some(o) = objects.next() {
+		    		write!(f, "{}", o)?;
 
-		    		    for o in objects {	
-		    			write!(f, " {}", o)?;
-		    		    }
-		    		},
-		    		None => (),
+		    		for o in objects {	
+		    		    write!(f, " {}", o)?;
+		    		}
 			    }
 
 			    write!(f, " . {})", c)
@@ -240,15 +237,12 @@ impl fmt::Debug for Object {
 
 		    let mut objects = objects.iter();
 
-		    match objects.next() {
-			Some(o) => {
-			    write!(f, "{}", o)?;
+		    if let Some(o) = objects.next() {
+			write!(f, "{}", o)?;
 
-			    for o in objects {	
-				write!(f, " {}", o)?;
-			    }
-			},
-			None => (),
+			for o in objects {	
+			    write!(f, " {}", o)?;
+			}
 		    }
 
 		    write!(f, ")")

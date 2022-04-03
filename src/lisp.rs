@@ -10,11 +10,8 @@ pub struct Lisp<'a> {
 
 impl<'a> Lisp<'a> {
     pub fn new(globals: &'a mut HashMap<String, Box<Object>>) -> Self {
-	let mut scope = Vec::new();
-	scope.push(HashMap::new());
-
         Self {
-	    scope,
+	    scope: vec![HashMap::new()],
 	    globals,
 	}
     }
@@ -47,9 +44,8 @@ impl<'a> Lisp<'a> {
     fn eval_symbol(&self, symbol: &str) -> LispResult {
         if !symbol.is_empty() {
 	    for s in self.scope.iter().rev() {
-		match s.get(symbol) {
-                    Some(o) => return Ok(o.clone()),
-                    None => (),
+		if let Some(o) = s.get(symbol) {
+                    return Ok(o.clone());
 		}
 	    }
 
