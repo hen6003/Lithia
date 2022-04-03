@@ -40,6 +40,29 @@ impl Object {
         }
     }
 
+    pub fn pair_list_to_string(&self) -> Result<String, ()> {
+	let mut string = String::new();
+	let mut cur_object = self;
+	
+	loop {
+	    match cur_object {
+		Object::Pair(a, b) => {
+		    if let Self::Character(c) = **a {
+	    		string.push(c);
+
+			cur_object = b;
+		    } else {
+	    		return Err(())
+		    }
+		},
+		Object::Nil => break,
+		_ => return Err(()),
+	    }
+	}
+
+	Ok(string)
+    }
+
     fn append_to_pair_list(&mut self, appende: Object) {
         let mut cur_object: &mut Self = match self {
             Self::Pair(_, b) => b,

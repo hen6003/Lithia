@@ -18,6 +18,8 @@ Evaluates the given object and what it returns
 Display an object
 * `read`
 Reads a line into objects
+* `include`
+Reads a file and evaluates it, returning the last object
 * `while`
 While first argument isn't nil, evaluates the rest
 * `read`

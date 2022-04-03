@@ -1,3 +1,8 @@
+// Defining the standard functions and variables that exist in the language
+
+use std::fs::File;
+use std::io::Read;
+
 use crate::lisp::Lisp;
 use crate::object::Object;
 use crate::errors::*;
@@ -16,6 +21,7 @@ impl<'a> Lisp<'a> {
         self.add_func(true, "while", lispwhile)?;
         self.add_func(true, "print", print)?;
         self.add_func(true, "read", read)?;
+        self.add_func(true, "include", include)?;
         self.add_func(true, "func", func)?;
 
         self.add_func(true, "first", car)?;
@@ -594,4 +600,46 @@ fn cdr(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
 	Object::Nil => Err(RustFuncError::new_args_error(ArgumentsError::NotEnough)),
         _ => Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
     }
+}
+
+// Include another file, causing execution to switch to that file
+fn include(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
+    let file = match arg {
+        Object::Pair(a, b) => {
+	    if *b != Object::Nil {
+		return Err(RustFuncError::new_args_error(ArgumentsError::TooMany))
+	    }
+
+	    lisp.eval_object(a)?
+	},
+	Object::Nil => return Err(RustFuncError::new_args_error(ArgumentsError::NotEnough)),
+        _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
+    };
+
+    let file = match file.pair_list_to_string() {
+	Ok(s) => s,
+	Err(_) => return Err(RustFuncError::new_args_error(ArgumentsError::WrongType)),
+    };
+
+    let mut file = match File::open(&file) {
+        Err(why) => panic!("couldn't open: {}", why),
+        Ok(file) => file,
+    };
+
+    let mut data = String::new();
+    if let Err(why) = file.read_to_string(&mut data) {
+        panic!("couldn't read: {}", why);
+    }
+  
+    let objects = Object::eval(&data)?; // Evaluate tokens into objects
+    let objects: Vec<Box<Object>> = objects.into_iter().map(Box::new).collect(); // Store objects on the heap
+
+    let mut scope = Lisp::new(lisp.globals);
+
+    let mut ret = Box::new(Object::Nil);
+    for o in objects {
+	ret = scope.eval_object(o)?;
+    }
+
+    Ok(ret)
 }

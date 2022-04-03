@@ -5,7 +5,7 @@ use crate::errors::*;
 
 pub struct Lisp<'a> {
     scope: Vec<HashMap<String, Box<Object>>>,
-    globals: &'a mut HashMap<String, Box<Object>>,
+    pub globals: &'a mut HashMap<String, Box<Object>>,
 }
 
 impl<'a> Lisp<'a> {
