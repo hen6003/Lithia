@@ -419,25 +419,33 @@ fn print(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
 fn read(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
     use std::io::{stdin, stdout, Write};
 
-    let c = match arg {
+    let promptobject = match arg {
         Object::Pair(a, b) => {
             if *b != Object::Nil {
                 return Err(RustFuncError::new_args_error(ArgumentsError::TooMany))
             }
-            match *lisp.eval_object(a)? {
-                Object::Character(c) => c,
-                _ => return Err(RustFuncError::new_args_error(ArgumentsError::WrongType)),
-            }
+
+	    a
         },
-        Object::Nil => '>',
+        Object::Nil => match lisp.eval_object(Box::new(Object::Symbol("PROMPT".to_string()))) {
+	    Ok(o) => o,
+	    Err(_) => Box::new(Object::Nil),
+	},
         _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
+    };
+
+    let prompt = match *lisp.eval_object(promptobject)? {
+	//TODO handle string
+        Object::Character(c) => format!("{} ", c),
+	Object::Nil => "> ".to_string(),
+        _ => return Err(RustFuncError::new_args_error(ArgumentsError::WrongType)),
     };
 
     let stdin = stdin();
     let mut stdout = stdout();
     let mut input = String::new();
 
-    print!("{} ", c);
+    stdout.write(prompt.as_bytes()).unwrap();
     stdout.flush().unwrap();
     
     stdin.read_line(&mut input).unwrap();
