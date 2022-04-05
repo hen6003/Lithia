@@ -1,5 +1,5 @@
 [package]
-name = "rlisp"
+name = "lithia"
 version = "1.0.0"
 edition = "2021"
 
@@ -9,5 +9,5 @@ edition = "2021"
 regex = "*"
 
 [[bin]]
-name = "rlisp"
+name = "lithia"
 path = "src/bin/main.rs" # replace bin.rs with name of your file
