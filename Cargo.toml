@@ -2,6 +2,10 @@
 name = "lithia"
 version = "1.0.0"
 edition = "2021"
+license = "MIT"
+repository = "https://github.com/hen6003/Lithia"
+keywords = ["language", "lisp"]
+catgories = ["compilers"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
