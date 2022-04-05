@@ -1,13 +1,8 @@
-mod lisp;
-mod object;
-mod stdenv;
-mod errors;
-
 use std::collections::HashMap;
-
 use std::env;
 use std::fs;
-use lisp::Lisp;
+
+use rlisp::Lisp;
 
 fn main() {
     let args: Vec<String> = env::args().collect();

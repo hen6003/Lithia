@@ -7,3 +7,7 @@ edition = "2021"
 
 [dependencies]
 regex = "*"
+
+[[bin]]
+name = "rlisp"
+path = "src/bin/main.rs" # replace bin.rs with name of your file
