@@ -1,5 +1,8 @@
-# rlisp
+# Lithia
 lisp implemented in rust
+
+## Name
+Name comes from another name for Lithium Oxide
 
 ## Functions
 * `quote` 
