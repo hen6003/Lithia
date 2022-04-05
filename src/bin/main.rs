@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::env;
 use std::fs;
 
-use rlisp::Lisp;
+use lithia::Lisp;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
