@@ -499,7 +499,7 @@ fn read(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
     let mut stdout = stdout();
     let mut input = String::new();
 
-    stdout.write(prompt.as_bytes()).unwrap();
+    stdout.write_all(prompt.as_bytes()).unwrap();
     stdout.flush().unwrap();
     
     stdin.read_line(&mut input).unwrap();
