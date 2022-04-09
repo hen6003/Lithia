@@ -1,22 +1,20 @@
 [package]
 name = "lithia"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/hen6003/Lithia"
 keywords = ["language", "lisp"]
-catgories = ["compilers"]
+categories = ["compilers"]
 description = "Embeddable and simple lisp dialect"
 exclude = [
     "examples/*",
     "bin/*",
 ]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 regex = "1.5.5"
 
 [[bin]]
 name = "lithia"
-path = "src/bin/main.rs" # replace bin.rs with name of your file
+path = "src/bin/main.rs"

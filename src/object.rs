@@ -1,4 +1,5 @@
 use regex::Regex;
+
 use crate::Lisp;
 use crate::errors::*;
 
@@ -10,8 +11,8 @@ pub enum Object {
     Symbol(String),
     Number(f32),
     Character(char),
-    RustFunc(fn (&mut Lisp, Object) -> RustFuncResult),
     LispFunc(Vec<String>, Vec<Object>),
+    RustFunc(fn (&mut Lisp, Object) -> RustFuncResult),
 }
 
 impl Object {
@@ -24,7 +25,13 @@ impl Object {
 	    let mut string = string.to_string();
 	    string.pop();
 
-	    //TODO handle escape codes
+	    let string = string
+		.replace("\\\\", "\\")
+		.replace("\\\"", "\"")
+		.replace("\\t", "\t")
+		.replace("\\r", "\r")
+		.replace("\\n", "\n")
+		.replace("\\0", "\0");
 
 	    let objects = string
 		.chars()
@@ -248,7 +255,15 @@ impl fmt::Debug for Object {
 
 		    for o in objects {
 			if let Self::Character(c) = **o {
-			    string.push(c);
+			    match c {
+				'\\' => string.push_str("\\\\"),
+				'\"' => string.push_str("\\\n"),
+				'\t' => string.push_str("\\t"),
+				'\r' => string.push_str("\\r"),
+				'\n' => string.push_str("\\n"),
+				'\0' => string.push_str("\\0"),
+				c => string.push(c),
+			    }
 			} else {
 			    panic!("Unexpected type in string");
 			}
