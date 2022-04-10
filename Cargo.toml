@@ -12,6 +12,10 @@ exclude = [
     "bin/*",
 ]
 
+[features]
+default = ["system"]
+system = []
+
 [dependencies]
 regex = "1.5.5"
 
