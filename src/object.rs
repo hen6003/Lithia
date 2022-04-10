@@ -36,7 +36,7 @@ impl Object {
 	    let objects = string
 		.chars()
 		.skip(1)
-		.map(Object::Character)
+		.map(Self::Character)
 		.collect();
 
 	    Ok(Self::array_to_pair_list(objects))
@@ -45,6 +45,15 @@ impl Object {
         } else {
             Err(LispError::new(LispErrorKind::Parser, ParserError::UnparsableAtom(string.to_string())))
         }
+    }
+
+    pub fn string_to_lisp_string(string: &str) -> Self {
+	let objects = string
+	    .chars()
+	    .map(Self::Character)
+	    .collect();
+	
+	Self::array_to_pair_list(objects)
     }
 
     pub fn pair_list_to_string(&self) -> Result<String, ()> {
