@@ -1,6 +1,6 @@
 [package]
 name = "lithia"
-version = "1.0.1"
+version = "1.0.2"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/hen6003/Lithia"
