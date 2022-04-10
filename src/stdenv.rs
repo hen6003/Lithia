@@ -62,7 +62,7 @@ impl<'a> Lisp<'a> {
         self.add_func(true, "ne", notequal)?;
 
 	#[cfg(feature = "system")]
-	self.add_sysenv();
+	self.add_sysenv()?;
 
 	Ok(self)
     }
