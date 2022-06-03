@@ -14,12 +14,10 @@ fn main() {
     };
 
     let mut globals = HashMap::new();
-    let ret = Lisp::new(&mut globals)
-        .add_stdenv().unwrap()
-        .eval(&code);
+    let ret = Lisp::new(&mut globals).add_stdenv().unwrap().eval(&code);
 
     match ret {
         Ok(_) => (),
-        Err(e) => panic!("{}", e),
+        Err(e) => println!("\x1b[31m{}\x1b[0m", e),
     }
 }

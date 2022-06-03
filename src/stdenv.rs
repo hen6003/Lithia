@@ -31,6 +31,7 @@ impl<'a> Lisp<'a> {
         self.add_func(true, "quote", quote)?;
         self.add_func(true, "eval", eval)?;
         self.add_func(true, "while", lispwhile)?;
+        self.add_func(true, "if", lispif)?;
         self.add_func(true, "func", func)?;
 
         self.add_func(true, "first", car)?;
@@ -356,6 +357,62 @@ fn lispwhile(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
     lisp.scope_end();
 
     Ok(Box::new(Object::Nil))
+}
+
+// Evaluates the given object forever conditionally
+fn lispif(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
+    let first;
+    let second;
+    let third;
+
+    match arg {
+        Object::Pair(a, b) => {
+            first = a;
+
+            match *b {
+                Object::Pair(a, b) => {
+                    second = a;
+
+                    match *b {
+                        Object::Pair(a, b) => {
+                            third = Some(a);
+
+                            match *b {
+                                Object::Nil => (),
+                                _ => {
+                                    return Err(RustFuncError::new_args_error(
+                                        ArgumentsError::NotEnough,
+                                    ))
+                                }
+                            }
+                        }
+                        Object::Nil => third = None,
+                        _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
+                    }
+                }
+                Object::Nil => {
+                    return Err(RustFuncError::new_args_error(ArgumentsError::NotEnough))
+                }
+                _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
+            }
+        }
+        Object::Nil => return Err(RustFuncError::new_args_error(ArgumentsError::NotEnough)),
+        _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
+    };
+
+    lisp.scope_create();
+
+    let ret = if *lisp.eval_object(first.clone())? != Object::Nil {
+        lisp.eval_object(second.clone())?
+    } else if let Some(third) = third {
+        lisp.eval_object(third.clone())?
+    } else {
+        Box::new(Object::Nil)
+    };
+
+    lisp.scope_end();
+
+    Ok(ret)
 }
 
 // Evaluates the given object forever
