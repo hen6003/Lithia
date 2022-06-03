@@ -1,3 +1,4 @@
+/// Example runner for lithia - running either a file or a repl
 use std::collections::HashMap;
 use std::env;
 use std::fs;

@@ -25,8 +25,8 @@ let ret = Lisp::new(&mut globals)
 ```
 */
 
-pub mod lisp;
 pub mod errors;
+pub mod lisp;
 pub mod object;
 pub mod stdenv;
 

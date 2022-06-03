@@ -1,7 +1,7 @@
 use regex::Regex;
 
-use crate::Lisp;
 use crate::errors::*;
+use crate::Lisp;
 
 #[derive(Clone)]
 pub enum Object {
@@ -11,8 +11,9 @@ pub enum Object {
     Symbol(String),
     Number(f32),
     Character(char),
+    Quoted(Box<Object>),
     LispFunc(Vec<String>, Vec<Object>),
-    RustFunc(fn (&mut Lisp, Object) -> RustFuncResult),
+    RustFunc(fn(&mut Lisp, Object) -> RustFuncResult),
 }
 
 impl Object {
@@ -21,62 +22,58 @@ impl Object {
             Ok(Self::Number(i))
         } else if string.len() == 2 && string.starts_with('\\') {
             Ok(Self::Character(string.chars().nth(1).unwrap()))
-	} else if string.starts_with('"') && string.ends_with('"') {
-	    let mut string = string.to_string();
-	    string.pop();
+        } else if string.starts_with('"') && string.ends_with('"') {
+            let mut string = string.to_string();
+            string.pop();
 
-	    let string = string
-		.replace("\\\\", "\\")
-		.replace("\\\"", "\"")
-		.replace("\\t", "\t")
-		.replace("\\r", "\r")
-		.replace("\\n", "\n")
-		.replace("\\0", "\0");
+            let string = string
+                .replace("\\\\", "\\")
+                .replace("\\\"", "\"")
+                .replace("\\t", "\t")
+                .replace("\\r", "\r")
+                .replace("\\n", "\n")
+                .replace("\\0", "\0");
 
-	    let objects = string
-		.chars()
-		.skip(1)
-		.map(Self::Character)
-		.collect();
+            let objects = string.chars().skip(1).map(Self::Character).collect();
 
-	    Ok(Self::array_to_pair_list(objects))
+            Ok(Self::array_to_pair_list(objects))
         } else if !string.is_empty() {
             Ok(Self::Symbol(string.to_string()))
         } else {
-            Err(LispError::new(LispErrorKind::Parser, ParserError::UnparsableAtom(string.to_string())))
+            Err(LispError::new(
+                LispErrorKind::Parser,
+                ParserError::UnparsableAtom(string.to_string()),
+            ))
         }
     }
 
     pub fn string_to_lisp_string(string: &str) -> Self {
-	let objects = string
-	    .chars()
-	    .map(Self::Character)
-	    .collect();
-	
-	Self::array_to_pair_list(objects)
+        let objects = string.chars().map(Self::Character).collect();
+
+        Self::array_to_pair_list(objects)
     }
 
     pub fn pair_list_to_string(&self) -> Result<String, ()> {
-	let mut string = String::new();
-	let mut cur_object = self;
-	
-	loop {
-	    match cur_object {
-		Object::Pair(a, b) => {
-		    if let Self::Character(c) = **a {
-	    		string.push(c);
+        let mut string = String::new();
+        let mut cur_object = self;
 
-			cur_object = b;
-		    } else {
-	    		return Err(())
-		    }
-		},
-		Object::Nil => break,
-		_ => return Err(()),
-	    }
-	}
+        loop {
+            match cur_object {
+                Object::Pair(a, b) => {
+                    if let Self::Character(c) = **a {
+                        string.push(c);
 
-	Ok(string)
+                        cur_object = b;
+                    } else {
+                        return Err(());
+                    }
+                }
+                Object::Nil => break,
+                _ => return Err(()),
+            }
+        }
+
+        Ok(string)
     }
 
     fn append_to_pair_list(&mut self, appende: Object) {
@@ -119,19 +116,22 @@ impl Object {
                     "(" => {
                         if dot_occured {
                             let mut list = Self::array_to_pair_list(list);
- 
+
                             list.append_to_pair_list(Self::iter_to_object(strings)?);
 
                             let next = strings.next().unwrap();
                             if next != *")" {
-                                return Err(LispError::new(LispErrorKind::Parser, ParserError::InvalidToken(next)));
+                                return Err(LispError::new(
+                                    LispErrorKind::Parser,
+                                    ParserError::InvalidToken(next),
+                                ));
                             }
 
                             break list;
                         } else {
                             list.push(Self::iter_to_object(strings)?)
                         }
-                    },
+                    }
                     ")" => {
                         break if list.is_empty() {
                             Self::Nil
@@ -143,30 +143,86 @@ impl Object {
                         if !list.is_empty() {
                             dot_occured = true
                         } else {
-                            return Err(LispError::new(LispErrorKind::Parser, ParserError::InvalidToken(".".to_string())));
+                            return Err(LispError::new(
+                                LispErrorKind::Parser,
+                                ParserError::InvalidToken(".".to_string()),
+                            ));
                         }
-                    },
+                    }
                     s => {
                         if dot_occured {
                             if strings.next() == Some(")".to_string()) {
                                 let mut list = Self::array_to_pair_list(list);
- 
-				if !s.starts_with(';') { // Ignore comments
-			    	    list.append_to_pair_list(Object::parse_atom(s)?);
-				}
+
+                                // Ignore comments
+                                if !s.starts_with(';') {
+                                    list.append_to_pair_list(Object::parse_atom(s)?);
+                                }
 
                                 break list;
                             } else {
-                                return Err(LispError::new(LispErrorKind::Parser, ParserError::InvalidToken(s.to_string())));
+                                return Err(LispError::new(
+                                    LispErrorKind::Parser,
+                                    ParserError::InvalidToken(s.to_string()),
+                                ));
                             }
-                        } else if !s.starts_with(';') { // Ignore comments
-			    list.push(Object::parse_atom(s)?);
+                        } else {
+                            if let Some(o) = Self::parse_string(s, strings)? {
+                                list.push(o)
+                            }
                         }
-                    },
+                    }
                 },
-                None => return Err(LispError::new(LispErrorKind::Parser, ParserError::UnmatchedToken('('))),
+                None => {
+                    return Err(LispError::new(
+                        LispErrorKind::Parser,
+                        ParserError::UnmatchedToken('('),
+                    ))
+                }
             }
         })
+    }
+
+    fn parse_string(
+        string: &str,
+        iter: &mut dyn Iterator<Item = String>,
+    ) -> Result<Option<Object>, LispError> {
+        match string {
+            "(" => Ok(Some(Self::iter_to_object(iter)?)),
+            ")" => Err(LispError::new(
+                LispErrorKind::Parser,
+                ParserError::UnmatchedToken(')'),
+            )),
+            "." => Err(LispError::new(
+                LispErrorKind::Parser,
+                ParserError::InvalidToken(".".to_string()),
+            )),
+            "\'" => {
+                if let Some(next) = iter.next() {
+                    if let Some(next) = Self::parse_string(&next, iter)? {
+                        Ok(Some(Object::Quoted(Box::new(next))))
+                    } else {
+                        Err(LispError::new(
+                            LispErrorKind::Parser,
+                            ParserError::EmptyQuote,
+                        ))
+                    }
+                } else {
+                    Err(LispError::new(
+                        LispErrorKind::Parser,
+                        ParserError::EmptyQuote,
+                    ))
+                }
+            }
+            s => {
+                // Ignore comments
+                if !s.starts_with(';') {
+                    Ok(Some(Object::parse_atom(s)?))
+                } else {
+                    Ok(None)
+                }
+            }
+        }
     }
 
     fn eval_strings(strings: Vec<String>) -> Result<Vec<Object>, LispError> {
@@ -175,24 +231,21 @@ impl Object {
 
         loop {
             match iter.next() {
-                Some(s) => match s.as_str() {
-                    "(" => ret.push(Self::iter_to_object(&mut iter)?),
-                    ")" => return Err(LispError::new(LispErrorKind::Parser, ParserError::UnmatchedToken(')'))),
-                    "." => return Err(LispError::new(LispErrorKind::Parser, ParserError::InvalidToken(".".to_string()))),
-                    s => if !s.starts_with(';') { // Ignore comments
-                        ret.push(Object::parse_atom(s)?);
-                    },
-                },
-
+                Some(s) => {
+                    if let Some(o) = Self::parse_string(&s, &mut iter)? {
+                        ret.push(o)
+                    }
+                }
                 None => break Ok(ret),
             }
         }
     }
 
     fn split_into_strings(input: &str) -> Vec<String> {
-        let regex = Regex::new(r#"(?m);[^\n]*|"(?:\\.|[^"\\])*"|\(|\)|[^\s()]*"#).unwrap();
- 
-        regex.captures_iter(input)
+        let regex = Regex::new(r#"(?m);[^\n]*|"(?:\\.|[^"\\])*"|'|\(|\)|[^\s()]*"#).unwrap();
+
+        regex
+            .captures_iter(input)
             .filter_map(|x| {
                 let s = x.get(0).unwrap().as_str().to_string();
 
@@ -222,86 +275,89 @@ impl fmt::Debug for Object {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Pair(a, b) => {
-		let mut string = true;
-		let mut objects = Vec::new();
-		let mut cur_object = self;
-		
-		loop {
-		    match cur_object {
-			Self::Pair(a, b) => {
-			    objects.push(a);
+                let mut string = true;
+                let mut objects = Vec::new();
+                let mut cur_object = self;
 
-			    match **a {
-				Self::Character(_) => (),
-				_ => string = false,
-			    }
+                loop {
+                    match cur_object {
+                        Self::Pair(a, b) => {
+                            objects.push(a);
 
-			    cur_object = b;
-			},
-			Self::Nil => break,
-			c => return if objects.is_empty() {
-			    write!(f, "({:?} . {:?})", a, b)
-			} else {
-			    write!(f, "(")?;
+                            match **a {
+                                Self::Character(_) => (),
+                                _ => string = false,
+                            }
 
-			    let mut objects = objects.iter();
+                            cur_object = b;
+                        }
+                        Self::Nil => break,
+                        c => {
+                            return if objects.is_empty() {
+                                write!(f, "({:?} . {:?})", a, b)
+                            } else {
+                                write!(f, "(")?;
 
-			    if let Some(o) = objects.next() {
-		    		write!(f, "{}", o)?;
+                                let mut objects = objects.iter();
 
-		    		for o in objects {	
-		    		    write!(f, " {}", o)?;
-		    		}
-			    }
+                                if let Some(o) = objects.next() {
+                                    write!(f, "{}", o)?;
 
-			    write!(f, " . {})", c)
-			},
-		    }
-		}
+                                    for o in objects {
+                                        write!(f, " {}", o)?;
+                                    }
+                                }
 
-		if string {
-		    let mut string = String::new();
+                                write!(f, " . {})", c)
+                            }
+                        }
+                    }
+                }
 
-		    for o in objects {
-			if let Self::Character(c) = **o {
-			    match c {
-				'\\' => string.push_str("\\\\"),
-				'\"' => string.push_str("\\\n"),
-				'\t' => string.push_str("\\t"),
-				'\r' => string.push_str("\\r"),
-				'\n' => string.push_str("\\n"),
-				'\0' => string.push_str("\\0"),
-				c => string.push(c),
-			    }
-			} else {
-			    panic!("Unexpected type in string");
-			}
-		    }
+                if string {
+                    let mut string = String::new();
 
-		    write!(f, "\"{}\"", string)
-		} else {
-		    write!(f, "(")?;
+                    for o in objects {
+                        if let Self::Character(c) = **o {
+                            match c {
+                                '\\' => string.push_str("\\\\"),
+                                '\"' => string.push_str("\\\n"),
+                                '\t' => string.push_str("\\t"),
+                                '\r' => string.push_str("\\r"),
+                                '\n' => string.push_str("\\n"),
+                                '\0' => string.push_str("\\0"),
+                                c => string.push(c),
+                            }
+                        } else {
+                            panic!("Unexpected type in string");
+                        }
+                    }
 
-		    let mut objects = objects.iter();
+                    write!(f, "\"{}\"", string)
+                } else {
+                    write!(f, "(")?;
 
-		    if let Some(o) = objects.next() {
-			write!(f, "{}", o)?;
+                    let mut objects = objects.iter();
 
-			for o in objects {	
-			    write!(f, " {}", o)?;
-			}
-		    }
+                    if let Some(o) = objects.next() {
+                        write!(f, "{}", o)?;
 
-		    write!(f, ")")
-		}
-	    },
+                        for o in objects {
+                            write!(f, " {}", o)?;
+                        }
+                    }
+
+                    write!(f, ")")
+                }
+            }
             Self::Number(i) => write!(f, "{}", i),
             Self::Character(c) => write!(f, "\\{}", c),
             Self::Symbol(s) => write!(f, "{}", s),
+            Self::Quoted(o) => write!(f, "'{}", o),
             Self::Nil => write!(f, "()"),
             Self::True => write!(f, "t"),
             Self::RustFunc(x) => write!(f, "{:p}", x),
-	    Self::LispFunc(a, _) => write!(f, "({})", a.join(" ")),
+            Self::LispFunc(a, _) => write!(f, "({})", a.join(" ")),
         }
     }
 }
@@ -310,31 +366,27 @@ impl PartialEq for Object {
     fn eq(&self, other: &Self) -> bool {
         match self {
             Self::Pair(a, b) => match other {
-                Self::Pair(c, d) => {
-                    a == c && b == d
-                },
+                Self::Pair(c, d) => a == c && b == d,
                 _ => false,
             },
             Self::Number(i) => match other {
-                Self::Number(o) => {
-                    i == o
-                },
+                Self::Number(o) => i == o,
                 _ => false,
             },
             Self::Character(c) => match other {
-                Self::Character(o) => {
-                    c == o
-                },
+                Self::Character(o) => c == o,
                 _ => false,
             },
             Self::Symbol(s) => match other {
-                Self::Symbol(o) => {
-                    s == o
-                },
+                Self::Symbol(o) => s == o,
+                _ => false,
+            },
+            Self::Quoted(s) => match other {
+                Self::Quoted(o) => s == o,
                 _ => false,
             },
             Self::RustFunc(_) => false,
-	    Self::LispFunc(_,_) => false,
+            Self::LispFunc(_, _) => false,
             Self::Nil => matches!(other, Self::Nil),
             Self::True => matches!(other, Self::True),
         }

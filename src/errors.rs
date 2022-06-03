@@ -1,6 +1,6 @@
-use std::fmt;
-use std::error::Error;
 use crate::object::Object;
+use std::error::Error;
+use std::fmt;
 
 pub type LispResult = Result<Box<Object>, LispError>;
 pub type RustFuncResult = Result<Box<Object>, RustFuncError>;
@@ -19,13 +19,13 @@ pub struct LispError {
 }
 
 impl LispError {
-    pub fn new<E>(kind: LispErrorKind, error: E) -> Self 
+    pub fn new<E>(kind: LispErrorKind, error: E) -> Self
     where
-        E: Into<Box<dyn Error>>
+        E: Into<Box<dyn Error>>,
     {
         let error = error.into();
 
-        Self {kind, error}
+        Self { kind, error }
     }
 }
 
@@ -50,6 +50,7 @@ pub enum ParserError {
     UnmatchedToken(char),
     InvalidToken(String),
     UnparsableAtom(String),
+    EmptyQuote,
 }
 
 impl fmt::Display for ParserError {
@@ -58,6 +59,7 @@ impl fmt::Display for ParserError {
             Self::UnmatchedToken(c) => write!(f, "Unmatched token: '{}'", c),
             Self::UnparsableAtom(a) => write!(f, "Unparsable atom: {}", a),
             Self::InvalidToken(c) => write!(f, "Invalid token: '{}'", c),
+            Self::EmptyQuote => write!(f, "Empty quote"),
         }
     }
 }
@@ -90,7 +92,7 @@ pub enum RustFuncError {
 }
 
 impl RustFuncError {
-    pub fn new_args_error(error: ArgumentsError) -> Self { 
+    pub fn new_args_error(error: ArgumentsError) -> Self {
         Self::InvalidArguments(error)
     }
 }
@@ -98,7 +100,9 @@ impl RustFuncError {
 impl fmt::Display for RustFuncError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::InvalidArguments(e) => write!(f, "Error running function: Invalid arguments: {}", e),
+            Self::InvalidArguments(e) => {
+                write!(f, "Error running function: Invalid arguments: {}", e)
+            }
             Self::LispError(e) => write!(f, "{}", e),
         }
     }
