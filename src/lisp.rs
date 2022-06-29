@@ -109,7 +109,7 @@ impl<'a> Lisp<'a> {
                     },
                     Object::LispFunc(p, b) => {
                         let mut args = Vec::new();
-                        let objects = b.into_iter().map(Rc::clone).collect(); // Store objects on the heap
+                        let objects = b.iter().map(Rc::clone).collect(); // Store objects on the heap
 
                         // Create args
                         let mut cur_object = a;
@@ -155,8 +155,8 @@ impl<'a> Lisp<'a> {
                     )),
                 }
             }
-            Object::Symbol(s) => Ok(self.eval_symbol(&s)?),
-            Object::Quoted(_) => Ok(Rc::clone(&object)),
+            Object::Symbol(s) => Ok(self.eval_symbol(s)?),
+            Object::Quoted(o) => Ok(Rc::clone(&o)),
             _ => Ok(object),
         }
     }

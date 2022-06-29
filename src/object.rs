@@ -59,6 +59,7 @@ impl Object {
         Self::array_to_pair_list(objects)
     }
 
+    #[allow(clippy::result_unit_err)]
     pub fn pair_list_to_string(&self) -> Result<String, ()> {
         let mut string = String::new();
         let mut cur_object = self;
@@ -171,10 +172,8 @@ impl Object {
                                     ParserError::InvalidToken(s.to_string()),
                                 ));
                             }
-                        } else {
-                            if let Some(o) = Self::parse_string(s, strings)? {
-                                list.push(Rc::new(o))
-                            }
+                        } else if let Some(o) = Self::parse_string(s, strings)? {
+                            list.push(Rc::new(o))
                         }
                     }
                 },

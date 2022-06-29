@@ -12,7 +12,7 @@
   (/ total len))
 
 ;; List to find mean of
-(= list (quote (1 4 6 2)))
+(= list '(1 4 6 2))
 
 ;; Print mean of list
 (print (mean list))
