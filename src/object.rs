@@ -1,8 +1,7 @@
 use regex::Regex;
 use std::rc::Rc;
 
-use crate::errors::*;
-use crate::Lisp;
+use crate::{errors::*, Lisp};
 
 #[derive(Clone)]
 pub enum Object {

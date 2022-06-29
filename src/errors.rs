@@ -1,8 +1,6 @@
-use crate::object::Object;
+use std::{error::Error, fmt, rc::Rc};
 
-use std::error::Error;
-use std::fmt;
-use std::rc::Rc;
+use crate::object::Object;
 
 pub type LispResult = Result<Rc<Object>, LispError>;
 pub type RustFuncResult = Result<Rc<Object>, RustFuncError>;

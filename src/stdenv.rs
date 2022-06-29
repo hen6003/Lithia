@@ -1,18 +1,16 @@
 // Defining the standard functions and variables that exist in the language
 
-use std::rc::Rc;
+use std::{fs::File, io::Read, rc::Rc};
 
-use crate::errors::*;
-use crate::lisp::Lisp;
-use crate::object::Object;
+use crate::{errors::*, lisp::Lisp, object::Object};
 
 impl<'a> Lisp<'a> {
     #[cfg(feature = "system")]
     pub fn add_sysenv(&mut self) -> Result<&mut Self, LispError> {
         // System functions
-        //self.add_func(true, "include", include)?;
+        self.add_func(true, "include", include)?;
         self.add_func(true, "read", read)?;
-        //self.add_func(true, "exit", exit)?;
+        self.add_func(true, "exit", exit)?;
         self.add_func(true, "print", print)?;
 
         Ok(self)
@@ -28,9 +26,7 @@ impl<'a> Lisp<'a> {
         self.add_func(true, "quote", quote)?;
         self.add_func(true, "eval", eval)?;
         self.add_func(true, "while", lispwhile)?;
-        /*
         self.add_func(true, "if", lispif)?;
-        */
         self.add_func(true, "func", func)?;
 
         self.add_func(true, "first", car)?;
@@ -39,27 +35,26 @@ impl<'a> Lisp<'a> {
         self.add_func(true, "cdr", cdr)?;
 
         self.add_func(true, "=", set)?;
-        //self.add_func(true, "def", define)?;
+        self.add_func(true, "def", define)?;
         self.add_func(true, "defunc", defunc)?;
 
         // Math functions
         self.add_func(true, "+", add)?;
-        // self.add_func(true, "-", minus)?;
-        // self.add_func(true, "*", times)?;
+        self.add_func(true, "-", minus)?;
+        self.add_func(true, "*", times)?;
         self.add_func(true, "/", divide)?;
-        // self.add_func(true, "%", modulus)?;
-        // self.add_func(true, "==", equal)?;
+        self.add_func(true, "%", modulus)?;
+        self.add_func(true, "==", equal)?;
         self.add_func(true, "!=", notequal)?;
 
         // Non-symbol names
         self.add_func(true, "set", set)?;
         self.add_func(true, "add", add)?;
-        // self.add_func(true, "sub", minus)?;
-        // self.add_func(true, "mul", times)?;
+        self.add_func(true, "sub", minus)?;
+        self.add_func(true, "mul", times)?;
         self.add_func(true, "div", divide)?;
-        // self.add_func(true, "mod", modulus)?;
-        // self.add_func(true, "eq", equal)?;
-
+        self.add_func(true, "mod", modulus)?;
+        self.add_func(true, "eq", equal)?;
         self.add_func(true, "ne", notequal)?;
 
         #[cfg(feature = "system")]
@@ -69,38 +64,37 @@ impl<'a> Lisp<'a> {
     }
 }
 
-/*
-fn modulus(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
+fn modulus(lisp: &mut Lisp, arg: Rc<Object>) -> RustFuncResult {
     let mut sum;
-    let mut cur_object: Object = match arg {
+    let mut cur_object = match &*arg {
         Object::Pair(a, b) => {
-            sum = match *lisp.eval_object(a)? {
+            sum = match *lisp.eval_object(Rc::clone(a))? {
                 Object::Number(i) => i,
                 _ => return Err(RustFuncError::new_args_error(ArgumentsError::WrongType)),
             };
 
-            *b
+            b
         }
         Object::Nil => return Err(RustFuncError::new_args_error(ArgumentsError::NotEnough)),
         _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
     };
 
     loop {
-        match cur_object {
+        match &**cur_object {
             Object::Pair(a, b) => {
-                sum %= match *lisp.eval_object(a)? {
+                sum %= match *lisp.eval_object(Rc::clone(a))? {
                     Object::Number(i) => i,
                     _ => return Err(RustFuncError::new_args_error(ArgumentsError::WrongType)),
                 };
 
-                cur_object = *b
+                cur_object = b
             }
             Object::Nil => break Ok(Rc::new(Object::Number(sum))),
             _ => break Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
         }
     }
 }
-*/
+
 fn divide(lisp: &mut Lisp, arg: Rc<Object>) -> RustFuncResult {
     let mut sum;
     let mut cur_object = match &*arg {
@@ -131,31 +125,31 @@ fn divide(lisp: &mut Lisp, arg: Rc<Object>) -> RustFuncResult {
         }
     }
 }
-/*
-fn times(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
+
+fn times(lisp: &mut Lisp, arg: Rc<Object>) -> RustFuncResult {
     let mut sum;
-    let mut cur_object: Object = match arg {
+    let mut cur_object = match &*arg {
         Object::Pair(a, b) => {
-            sum = match *lisp.eval_object(a)? {
+            sum = match *lisp.eval_object(Rc::clone(a))? {
                 Object::Number(i) => i,
                 _ => return Err(RustFuncError::new_args_error(ArgumentsError::WrongType)),
             };
 
-            *b
+            b
         }
         Object::Nil => return Err(RustFuncError::new_args_error(ArgumentsError::NotEnough)),
         _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
     };
 
     loop {
-        match cur_object {
+        match &**cur_object {
             Object::Pair(a, b) => {
-                sum *= match *lisp.eval_object(a)? {
+                sum *= match *lisp.eval_object(Rc::clone(a))? {
                     Object::Number(i) => i,
                     _ => return Err(RustFuncError::new_args_error(ArgumentsError::WrongType)),
                 };
 
-                cur_object = *b
+                cur_object = b
             }
             Object::Nil => break Ok(Rc::new(Object::Number(sum))),
             _ => break Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
@@ -163,37 +157,37 @@ fn times(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
     }
 }
 
-fn minus(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
+fn minus(lisp: &mut Lisp, arg: Rc<Object>) -> RustFuncResult {
     let mut sum;
-    let mut cur_object: Object = match arg {
+    let mut cur_object = match &*arg {
         Object::Pair(a, b) => {
-            sum = match *lisp.eval_object(a)? {
+            sum = match *lisp.eval_object(Rc::clone(a))? {
                 Object::Number(i) => i,
                 _ => return Err(RustFuncError::new_args_error(ArgumentsError::WrongType)),
             };
 
-            *b
+            b
         }
         Object::Nil => return Err(RustFuncError::new_args_error(ArgumentsError::NotEnough)),
         _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
     };
 
     loop {
-        match cur_object {
+        match &**cur_object {
             Object::Pair(a, b) => {
-                sum -= match *lisp.eval_object(a)? {
+                sum -= match *lisp.eval_object(Rc::clone(a))? {
                     Object::Number(i) => i,
                     _ => return Err(RustFuncError::new_args_error(ArgumentsError::WrongType)),
                 };
 
-                cur_object = *b
+                cur_object = b
             }
             Object::Nil => break Ok(Rc::new(Object::Number(sum))),
             _ => break Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
         }
     }
 }
-*/
+
 fn add(lisp: &mut Lisp, arg: Rc<Object>) -> RustFuncResult {
     let mut sum;
     let mut cur_object = match &*arg {
@@ -251,13 +245,13 @@ fn set(lisp: &mut Lisp, arg: Rc<Object>) -> RustFuncResult {
 
     Ok(Rc::new(Object::Nil))
 }
-/*
+
 // Define global
-fn define(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
-    let (symbol, data) = match arg {
-        Object::Pair(a, b) => match *b {
+fn define(lisp: &mut Lisp, arg: Rc<Object>) -> RustFuncResult {
+    let (symbol, data) = match &*arg {
+        Object::Pair(a, b) => match &**b {
             Object::Pair(c, d) => {
-                if *d != Object::Nil {
+                if **d != Object::Nil {
                     return Err(RustFuncError::new_args_error(ArgumentsError::NotEnough));
                 }
 
@@ -269,16 +263,15 @@ fn define(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
         _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
     };
 
-    if let Object::Symbol(symbol) = *symbol {
-        let data = lisp.eval_object(data)?;
-        lisp.add_var(true, &symbol, data)?;
+    if let Object::Symbol(symbol) = &**symbol {
+        let data = lisp.eval_object(Rc::clone(data))?;
+        lisp.add_var(true, symbol, data)?;
     } else {
         return Err(RustFuncError::new_args_error(ArgumentsError::WrongType));
     }
 
     Ok(Rc::new(Object::Nil))
 }
-*/
 
 // Define global function
 fn defunc(lisp: &mut Lisp, arg: Rc<Object>) -> RustFuncResult {
@@ -361,26 +354,25 @@ fn lispwhile(lisp: &mut Lisp, arg: Rc<Object>) -> RustFuncResult {
     Ok(Rc::new(Object::Nil))
 }
 
-/*
 // Evaluates the given object forever conditionally
-fn lispif(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
+fn lispif(lisp: &mut Lisp, arg: Rc<Object>) -> RustFuncResult {
     let first;
     let second;
     let third;
 
-    match arg {
+    match &*arg {
         Object::Pair(a, b) => {
             first = a;
 
-            match *b {
+            match &**b {
                 Object::Pair(a, b) => {
                     second = a;
 
-                    match *b {
+                    match &**b {
                         Object::Pair(a, b) => {
                             third = Some(a);
 
-                            match *b {
+                            match &**b {
                                 Object::Nil => (),
                                 _ => {
                                     return Err(RustFuncError::new_args_error(
@@ -418,20 +410,19 @@ fn lispif(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
     Ok(ret)
 }
 
-// Evaluates the given object forever
-fn equal(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
+fn equal(lisp: &mut Lisp, arg: Rc<Object>) -> RustFuncResult {
     let first;
     let second;
 
-    match arg {
+    match &*arg {
         Object::Pair(a, b) => {
             first = a;
 
-            match *b {
+            match &**b {
                 Object::Pair(a, b) => {
                     second = a;
 
-                    match *b {
+                    match &**b {
                         Object::Nil => (),
                         _ => return Err(RustFuncError::new_args_error(ArgumentsError::NotEnough)),
                     }
@@ -446,15 +437,13 @@ fn equal(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
         _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
     };
 
-    if *lisp.eval_object(first)? == *lisp.eval_object(second)? {
+    if *lisp.eval_object(Rc::clone(first))? == *lisp.eval_object(Rc::clone(second))? {
         Ok(Rc::new(Object::True))
     } else {
         Ok(Rc::new(Object::Nil))
     }
 }
-*/
 
-// Evaluates the given object forever
 fn notequal(lisp: &mut Lisp, arg: Rc<Object>) -> RustFuncResult {
     let first;
     let second;
@@ -504,17 +493,16 @@ fn quote(_: &mut Lisp, arg: Rc<Object>) -> RustFuncResult {
     }
 }
 
-/*
 // Exit lisp interpreter, number may be provided for exit code
 #[cfg(feature = "system")]
-fn exit(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
-    let exit_code = match arg {
+fn exit(lisp: &mut Lisp, arg: Rc<Object>) -> RustFuncResult {
+    let exit_code = match &*arg {
         Object::Pair(a, b) => {
-            if *b != Object::Nil {
+            if **b != Object::Nil {
                 return Err(RustFuncError::new_args_error(ArgumentsError::TooMany));
             }
 
-            if let Object::Number(n) = *lisp.eval_object(a)? {
+            if let Object::Number(n) = *lisp.eval_object(Rc::clone(a))? {
                 n
             } else {
                 return Err(RustFuncError::new_args_error(ArgumentsError::WrongType));
@@ -525,7 +513,7 @@ fn exit(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
 
     std::process::exit(exit_code as i32);
 }
-*/
+
 // Display an object
 #[cfg(feature = "system")]
 fn print(lisp: &mut Lisp, arg: Rc<Object>) -> RustFuncResult {
@@ -682,17 +670,17 @@ fn cdr(lisp: &mut Lisp, arg: Rc<Object>) -> RustFuncResult {
         _ => Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
     }
 }
-/*
+
 // Include another file, causing execution to switch to that file
 #[cfg(feature = "system")]
-fn include(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
-    let file = match arg {
+fn include(lisp: &mut Lisp, arg: Rc<Object>) -> RustFuncResult {
+    let file = match &*arg {
         Object::Pair(a, b) => {
-            if *b != Object::Nil {
+            if **b != Object::Nil {
                 return Err(RustFuncError::new_args_error(ArgumentsError::TooMany));
             }
 
-            lisp.eval_object(a)?
+            lisp.eval_object(Rc::clone(a))?
         }
         Object::Nil => return Err(RustFuncError::new_args_error(ArgumentsError::NotEnough)),
         _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
@@ -725,4 +713,3 @@ fn include(lisp: &mut Lisp, arg: Object) -> RustFuncResult {
 
     Ok(ret)
 }
-*/

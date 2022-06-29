@@ -1,8 +1,6 @@
-use std::collections::HashMap;
-use std::rc::Rc;
+use std::{collections::HashMap, rc::Rc};
 
-use crate::errors::*;
-use crate::object::Object;
+use crate::{errors::*, object::Object};
 
 pub struct Lisp<'a> {
     scope: Vec<HashMap<String, Rc<Object>>>,
@@ -156,7 +154,7 @@ impl<'a> Lisp<'a> {
                 }
             }
             Object::Symbol(s) => Ok(self.eval_symbol(s)?),
-            Object::Quoted(o) => Ok(Rc::clone(&o)),
+            Object::Quoted(o) => Ok(Rc::clone(o)),
             _ => Ok(object),
         }
     }
