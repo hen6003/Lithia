@@ -1,6 +1,6 @@
 [package]
 name = "lithia"
-version = "1.0.4"
+version = "1.0.6"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/hen6003/Lithia"
@@ -8,8 +8,7 @@ keywords = ["language", "lisp"]
 categories = ["compilers"]
 description = "Embeddable and simple lisp dialect"
 exclude = [
-    "examples/*",
-    "bin/*",
+    "lisp-examples/*",
 ]
 
 [features]
@@ -17,7 +16,7 @@ default = ["system"]
 system = []
 
 [dependencies]
-regex = "1.5.5"
+regex = "1.5.6"
 
 [[bin]]
 name = "lithia"
