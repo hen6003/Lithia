@@ -1,4 +1,5 @@
 use regex::Regex;
+use std::rc::Rc;
 
 use crate::errors::*;
 use crate::Lisp;
@@ -7,13 +8,13 @@ use crate::Lisp;
 pub enum Object {
     Nil,
     True,
-    Pair(Box<Object>, Box<Object>),
+    Pair(Rc<Object>, Rc<Object>),
     Symbol(String),
     Number(f32),
     Character(char),
-    Quoted(Box<Object>),
-    LispFunc(Vec<String>, Vec<Object>),
-    RustFunc(fn(&mut Lisp, Object) -> RustFuncResult),
+    Quoted(Rc<Object>),
+    LispFunc(Vec<String>, Vec<Rc<Object>>),
+    RustFunc(fn(&mut Lisp, Rc<Object>) -> RustFuncResult),
 }
 
 impl Object {
@@ -34,7 +35,12 @@ impl Object {
                 .replace("\\n", "\n")
                 .replace("\\0", "\0");
 
-            let objects = string.chars().skip(1).map(Self::Character).collect();
+            let objects = string
+                .chars()
+                .skip(1)
+                .map(Self::Character)
+                .map(Rc::new)
+                .collect();
 
             Ok(Self::array_to_pair_list(objects))
         } else if !string.is_empty() {
@@ -48,7 +54,7 @@ impl Object {
     }
 
     pub fn string_to_lisp_string(string: &str) -> Self {
-        let objects = string.chars().map(Self::Character).collect();
+        let objects = string.chars().map(Self::Character).map(Rc::new).collect();
 
         Self::array_to_pair_list(objects)
     }
@@ -75,16 +81,15 @@ impl Object {
 
         Ok(string)
     }
-
     fn append_to_pair_list(&mut self, appende: Object) {
         let mut cur_object: &mut Self = match self {
-            Self::Pair(_, b) => b,
+            Self::Pair(_, b) => Rc::get_mut(b).unwrap(),
             _ => panic!("Not a list"),
         };
 
         loop {
             match cur_object {
-                Self::Pair(_, b) => cur_object = b,
+                Self::Pair(_, b) => cur_object = Rc::get_mut(b).unwrap(),
                 Self::Nil => break,
                 _ => panic!("Not a list"),
             }
@@ -93,14 +98,14 @@ impl Object {
         *cur_object = appende;
     }
 
-    fn array_to_pair_list(array: Vec<Object>) -> Self {
-        let mut ret = Self::Pair(Box::new(array[0].clone()), Box::new(Self::Nil));
+    fn array_to_pair_list(array: Vec<Rc<Object>>) -> Self {
+        let mut ret = Self::Pair(array[0].clone(), Rc::new(Self::Nil));
 
         let mut iter = array.into_iter();
         iter.next();
 
         for i in iter {
-            ret.append_to_pair_list(Self::Pair(Box::new(i), Box::new(Self::Nil)));
+            ret.append_to_pair_list(Self::Pair(i.clone(), Rc::new(Self::Nil)));
         }
 
         ret
@@ -129,7 +134,7 @@ impl Object {
 
                             break list;
                         } else {
-                            list.push(Self::iter_to_object(strings)?)
+                            list.push(Rc::new(Self::iter_to_object(strings)?))
                         }
                     }
                     ")" => {
@@ -168,7 +173,7 @@ impl Object {
                             }
                         } else {
                             if let Some(o) = Self::parse_string(s, strings)? {
-                                list.push(o)
+                                list.push(Rc::new(o))
                             }
                         }
                     }
@@ -200,7 +205,7 @@ impl Object {
             "\'" => {
                 if let Some(next) = iter.next() {
                     if let Some(next) = Self::parse_string(&next, iter)? {
-                        Ok(Some(Object::Quoted(Box::new(next))))
+                        Ok(Some(Object::Quoted(Rc::new(next))))
                     } else {
                         Err(LispError::new(
                             LispErrorKind::Parser,

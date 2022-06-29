@@ -1,9 +1,11 @@
 use crate::object::Object;
+
 use std::error::Error;
 use std::fmt;
+use std::rc::Rc;
 
-pub type LispResult = Result<Box<Object>, LispError>;
-pub type RustFuncResult = Result<Box<Object>, RustFuncError>;
+pub type LispResult = Result<Rc<Object>, LispError>;
+pub type RustFuncResult = Result<Rc<Object>, RustFuncError>;
 
 #[derive(Debug, Clone)]
 pub enum LispErrorKind {
@@ -70,7 +72,7 @@ impl Error for ParserError {}
 pub enum EvalError {
     UnknownSymbol(String),
     GlobalExists(String),
-    NonFunction(Object),
+    NonFunction(Rc<Object>),
 }
 
 impl fmt::Display for EvalError {

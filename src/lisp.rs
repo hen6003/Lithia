@@ -1,15 +1,16 @@
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use crate::errors::*;
 use crate::object::Object;
 
 pub struct Lisp<'a> {
-    scope: Vec<HashMap<String, Box<Object>>>,
-    pub globals: &'a mut HashMap<String, Box<Object>>,
+    scope: Vec<HashMap<String, Rc<Object>>>,
+    pub globals: &'a mut HashMap<String, Rc<Object>>,
 }
 
 impl<'a> Lisp<'a> {
-    pub fn new(globals: &'a mut HashMap<String, Box<Object>>) -> Self {
+    pub fn new(globals: &'a mut HashMap<String, Rc<Object>>) -> Self {
         Self {
             scope: vec![HashMap::new()],
             globals,
@@ -30,7 +31,7 @@ impl<'a> Lisp<'a> {
         &mut self,
         global: bool,
         name: &str,
-        object: Box<Object>,
+        object: Rc<Object>,
     ) -> Result<&mut Self, LispError> {
         if global {
             match self.globals.get(name) {
@@ -54,9 +55,9 @@ impl<'a> Lisp<'a> {
         &mut self,
         global: bool,
         name: &str,
-        func: fn(&mut Lisp, Object) -> RustFuncResult,
+        func: fn(&mut Lisp, Rc<Object>) -> RustFuncResult,
     ) -> Result<&mut Self, LispError> {
-        self.add_var(global, name, Box::new(Object::RustFunc(func)))
+        self.add_var(global, name, Rc::new(Object::RustFunc(func)))
     }
 
     fn eval_symbol(&self, symbol: &str) -> LispResult {
@@ -76,11 +77,11 @@ impl<'a> Lisp<'a> {
                 )),
             }
         } else {
-            Ok(Box::new(Object::Nil))
+            Ok(Rc::new(Object::Nil))
         }
     }
 
-    pub fn set_var(&mut self, symbol: &str, data: Box<Object>) -> Result<(), LispError> {
+    pub fn set_var(&mut self, symbol: &str, data: Rc<Object>) -> Result<(), LispError> {
         // Check for variable, going up scope if it can't find it
         for v in self.scope.iter_mut().rev() {
             if let Some(s) = v.get_mut(symbol) {
@@ -95,18 +96,20 @@ impl<'a> Lisp<'a> {
         Ok(())
     }
 
-    pub fn eval_object(&mut self, object: Box<Object>) -> LispResult {
-        match *object {
+    pub fn eval_object(&mut self, object: Rc<Object>) -> LispResult {
+        //let object_unwrapped = Rc::get_mut(&mut object).unwrap();
+
+        match &*object {
             Object::Pair(ref f, ref a) => {
                 // Execute expression
-                match *self.eval_object(f.clone())? {
-                    Object::RustFunc(f) => match f(self, *a.clone()) {
+                match &*self.eval_object(f.clone())? {
+                    Object::RustFunc(f) => match f(self, Rc::clone(a)) {
                         Ok(x) => Ok(x),
                         Err(e) => Err(LispError::new(LispErrorKind::RustFunc, e)),
                     },
                     Object::LispFunc(p, b) => {
                         let mut args = Vec::new();
-                        let objects = b.into_iter().map(Box::new).collect(); // Store objects on the heap
+                        let objects = b.into_iter().map(Rc::clone).collect(); // Store objects on the heap
 
                         // Create args
                         let mut cur_object = a;
@@ -145,21 +148,21 @@ impl<'a> Lisp<'a> {
                         // Call function
                         scope.eval_objects(objects)
                     }
-                    Object::Character(_) => Ok(object),
-                    o => Err(LispError::new(
+                    Object::Character(_) => Ok(Rc::clone(&object)),
+                    _ => Err(LispError::new(
                         LispErrorKind::Eval,
-                        EvalError::NonFunction(o),
+                        EvalError::NonFunction(Rc::clone(&object)),
                     )),
                 }
             }
             Object::Symbol(s) => Ok(self.eval_symbol(&s)?),
-            Object::Quoted(o) => Ok(o),
+            Object::Quoted(_) => Ok(Rc::clone(&object)),
             _ => Ok(object),
         }
     }
 
-    pub fn eval_objects(&mut self, objects: Vec<Box<Object>>) -> LispResult {
-        let mut ret = Box::new(Object::Nil);
+    pub fn eval_objects(&mut self, objects: Vec<Rc<Object>>) -> LispResult {
+        let mut ret = Rc::new(Object::Nil);
 
         for o in objects {
             ret = self.eval_object(o)?
@@ -170,7 +173,7 @@ impl<'a> Lisp<'a> {
 
     pub fn eval(&mut self, input: &str) -> LispResult {
         let objects = Object::eval(input)?; // Evaluate tokens into objects
-        let objects = objects.into_iter().map(Box::new).collect(); // Store objects on the heap
+        let objects = objects.into_iter().map(Rc::new).collect(); // Store objects on the heap
 
         self.eval_objects(objects)
     }
