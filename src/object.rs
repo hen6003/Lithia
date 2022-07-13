@@ -1,9 +1,12 @@
 use regex::Regex;
+
+use std::any::Any;
+//use std::fmt::Debug;
 use std::rc::Rc;
 
 use crate::{errors::*, Lisp};
 
-#[derive(Clone)]
+//#[derive(Clone)]
 pub enum Object {
     Nil,
     True,
@@ -14,6 +17,7 @@ pub enum Object {
     Quoted(Rc<Object>),
     LispFunc(Vec<String>, Vec<Rc<Object>>),
     RustFunc(fn(&mut Lisp, Rc<Object>) -> RustFuncResult),
+    RustType(Box<dyn Any>),
 }
 
 impl Object {
@@ -81,6 +85,7 @@ impl Object {
 
         Ok(string)
     }
+
     fn append_to_pair_list(&mut self, appende: Object) {
         let mut cur_object: &mut Self = match self {
             Self::Pair(_, b) => Rc::get_mut(b).unwrap(),
@@ -361,6 +366,7 @@ impl fmt::Debug for Object {
             Self::True => write!(f, "t"),
             Self::RustFunc(x) => write!(f, "{:p}", x),
             Self::LispFunc(a, _) => write!(f, "({})", a.join(" ")),
+            Self::RustType(t) => write!(f, "{:?}", t),
         }
     }
 }
@@ -392,6 +398,7 @@ impl PartialEq for Object {
             Self::LispFunc(_, _) => false,
             Self::Nil => matches!(other, Self::Nil),
             Self::True => matches!(other, Self::True),
+            Self::RustType(_) => false,
         }
     }
 }

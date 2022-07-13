@@ -88,6 +88,12 @@ impl<'a> Lisp<'a> {
             }
         }
 
+        // Check for variable in globals
+        if let Some(s) = self.globals.get_mut(symbol) {
+            *s = data;
+            return Ok(());
+        }
+
         // If variable not found, create it
         self.add_var(false, symbol, data)?;
 
