@@ -13,12 +13,12 @@ use crate::{
 };
 
 impl LispBuilder {
-    pub fn add_sysenv(self) -> Result<Self, LispError> {
+    pub fn add_env_sys(self) -> Result<Self, LispError> {
         // System functions
-        self.add_func(true, "include", include)?
-            .add_func(true, "read", read)?
-            .add_func(true, "exit", exit)?
-            .add_func(true, "print", print)
+        self.add_func("include", include)?
+            .add_func("read", read)?
+            .add_func("exit", exit)?
+            .add_func("print", print)
     }
 }
 

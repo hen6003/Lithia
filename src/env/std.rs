@@ -13,39 +13,39 @@ use crate::{
 };
 
 impl LispBuilder {
-    pub fn add_stdenv(self) -> Result<Self, LispError> {
+    pub fn add_env_std(self) -> Result<Self, LispError> {
         // Variables
-        self.add_var(true, "t", Rc::new(Object::True))?
-            .add_var(true, "f", Rc::new(Object::Nil))?
-            .add_var(true, "pi", Rc::new(Object::Number(core::f32::consts::PI)))?
+        self.add_var("t", Rc::new(Object::True))?
+            .add_var("f", Rc::new(Object::Nil))?
+            .add_var("pi", Rc::new(Object::Number(core::f32::consts::PI)))?
             // Functions
-            .add_func(true, "quote", quote)?
-            .add_func(true, "eval", eval)?
-            .add_func(true, "while", lispwhile)?
-            .add_func(true, "if", lispif)?
-            .add_func(true, "func", func)?
-            .add_func(true, "car", car)?
-            .add_func(true, "cdr", cdr)?
-            .add_func(true, "=", set)?
-            .add_func(true, "def", define)?
-            .add_func(true, "defunc", defunc)?
+            .add_func("quote", quote)?
+            .add_func("eval", eval)?
+            .add_func("while", lispwhile)?
+            .add_func("if", lispif)?
+            .add_func("func", func)?
+            .add_func("car", car)?
+            .add_func("cdr", cdr)?
+            .add_func("=", set)?
+            .add_func("def", define)?
+            .add_func("defunc", defunc)?
             // Math functions
-            .add_func(true, "+", add)?
-            .add_func(true, "-", minus)?
-            .add_func(true, "*", times)?
-            .add_func(true, "/", divide)?
-            .add_func(true, "%", modulus)?
-            .add_func(true, "==", equal)?
-            .add_func(true, "!=", notequal)?
-            // Non-symbol names
-            .add_func(true, "set", set)?
-            .add_func(true, "add", add)?
-            .add_func(true, "sub", minus)?
-            .add_func(true, "mul", times)?
-            .add_func(true, "div", divide)?
-            .add_func(true, "mod", modulus)?
-            .add_func(true, "eq", equal)?
-            .add_func(true, "ne", notequal)
+            .add_func("set", set)?
+            .add_func("add", add)?
+            .add_func("sub", minus)?
+            .add_func("mul", times)?
+            .add_func("div", divide)?
+            .add_func("mod", modulus)?
+            .add_func("eq", equal)?
+            .add_func("ne", notequal)?
+            // Symbol names
+            .add_func("+", add)?
+            .add_func("-", minus)?
+            .add_func("*", times)?
+            .add_func("/", divide)?
+            .add_func("%", modulus)?
+            .add_func("==", equal)?
+            .add_func("!=", notequal)
     }
 }
 

@@ -18,10 +18,10 @@ lithia = "*"
 ```rust
 let code = "(while t (print (eval (read))))".to_string()
 
-let ret = LispBuilder::new()
-    .add_stdenv().unwrap()
-    .add_sysenv().unwrap()
-    .eval(&code);
+let lisp = LispBuilder::new()
+    .add_default_envs();
+
+lisp.eval(&code);
 ```
 */
 

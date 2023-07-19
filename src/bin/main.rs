@@ -12,7 +12,7 @@ fn main() {
         "(while t (print (eval (read))))".to_string()
     };
 
-    let mut lisp = LispBuilder::new().add_default_env().unwrap().build();
+    let mut lisp = LispBuilder::new().add_default_envs().unwrap().build();
 
     let ret = lisp.eval(&code);
 

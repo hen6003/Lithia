@@ -27,22 +27,16 @@ impl LispBuilder {
         }
     }
 
-    pub fn add_var(
-        mut self,
-        global: bool,
-        name: &str,
-        object: Rc<Object>,
-    ) -> Result<Self, LispError> {
-        self.lisp.add_var(global, name, object).map(|_| self)
+    pub fn add_var(mut self, name: &str, object: Rc<Object>) -> Result<Self, LispError> {
+        self.lisp.add_var(true, name, object).map(|_| self)
     }
 
     pub fn add_func(
         mut self,
-        global: bool,
         name: &str,
         func: fn(&mut Lisp, Rc<Object>) -> RustFuncResult,
     ) -> Result<Self, LispError> {
-        self.lisp.add_func(global, name, func).map(|_| self)
+        self.lisp.add_func(true, name, func).map(|_| self)
     }
 
     pub fn build(self) -> Lisp {
