@@ -1,7 +1,5 @@
 /// Example runner for lithia - running either a file or a repl
-use std::collections::HashMap;
-use std::env;
-use std::fs;
+use std::{collections::HashMap, env, fs};
 
 use lithia::Lisp;
 
@@ -15,7 +13,12 @@ fn main() {
     };
 
     let mut globals = HashMap::new();
-    let ret = Lisp::new(&mut globals).add_stdenv().unwrap().eval(&code);
+    let ret = Lisp::new(&mut globals)
+        .add_stdenv()
+        .unwrap()
+        .add_sysenv()
+        .unwrap()
+        .eval(&code);
 
     match ret {
         Ok(_) => (),

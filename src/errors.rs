@@ -1,4 +1,4 @@
-use alloc::{boxed::Box, string::String, rc::Rc};
+use alloc::{boxed::Box, rc::Rc, string::String};
 
 #[cfg(feature = "std")]
 use std::{error::Error, fmt};

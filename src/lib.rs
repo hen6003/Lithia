@@ -31,9 +31,9 @@ let ret = Lisp::new(&mut globals)
 
 extern crate alloc;
 
+pub mod env;
 pub mod errors;
 pub mod lisp;
 pub mod object;
-pub mod stdenv;
 
 pub use lisp::Lisp;

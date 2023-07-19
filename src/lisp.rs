@@ -1,8 +1,8 @@
 use alloc::{
     rc::Rc,
     string::{String, ToString},
+    vec,
     vec::Vec,
-    vec
 };
 
 #[cfg(feature = "std")]
