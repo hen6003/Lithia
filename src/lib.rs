@@ -18,9 +18,9 @@ lithia = "*"
 ```rust
 let code = "(while t (print (eval (read))))".to_string()
 
-let mut globals = HashMap::new();
-let ret = Lisp::new(&mut globals)
+let ret = LispBuilder::new()
     .add_stdenv().unwrap()
+    .add_sysenv().unwrap()
     .eval(&code);
 ```
 */
@@ -35,5 +35,3 @@ pub mod env;
 pub mod errors;
 pub mod lisp;
 pub mod object;
-
-pub use lisp::Lisp;

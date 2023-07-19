@@ -1,7 +1,7 @@
 /// Example runner for lithia - running either a file or a repl
-use std::{collections::HashMap, env, fs};
+use std::{env, fs};
 
-use lithia::Lisp;
+use lithia::lisp::LispBuilder;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -12,13 +12,9 @@ fn main() {
         "(while t (print (eval (read))))".to_string()
     };
 
-    let mut globals = HashMap::new();
-    let ret = Lisp::new(&mut globals)
-        .add_stdenv()
-        .unwrap()
-        .add_sysenv()
-        .unwrap()
-        .eval(&code);
+    let mut lisp = LispBuilder::new().add_default_env().unwrap().build();
+
+    let ret = lisp.eval(&code);
 
     match ret {
         Ok(_) => (),

@@ -5,6 +5,8 @@ use alloc::{
     vec::Vec,
 };
 
+use core::cell::RefCell;
+
 #[cfg(feature = "std")]
 use std::collections::HashMap;
 
@@ -13,13 +15,49 @@ use hashbrown::HashMap;
 
 use crate::{errors::*, object::Object};
 
-pub struct Lisp<'a> {
-    scope: Vec<HashMap<String, Rc<Object>>>,
-    pub globals: &'a mut HashMap<String, Rc<Object>>,
+#[derive(Clone)]
+pub struct LispBuilder {
+    lisp: Lisp,
 }
 
-impl<'a> Lisp<'a> {
-    pub fn new(globals: &'a mut HashMap<String, Rc<Object>>) -> Self {
+impl LispBuilder {
+    pub fn new() -> Self {
+        Self {
+            lisp: Lisp::new(Rc::new(RefCell::new(HashMap::new()))),
+        }
+    }
+
+    pub fn add_var(
+        mut self,
+        global: bool,
+        name: &str,
+        object: Rc<Object>,
+    ) -> Result<Self, LispError> {
+        self.lisp.add_var(global, name, object).map(|_| self)
+    }
+
+    pub fn add_func(
+        mut self,
+        global: bool,
+        name: &str,
+        func: fn(&mut Lisp, Rc<Object>) -> RustFuncResult,
+    ) -> Result<Self, LispError> {
+        self.lisp.add_func(global, name, func).map(|_| self)
+    }
+
+    pub fn build(self) -> Lisp {
+        self.lisp
+    }
+}
+
+#[derive(Clone)]
+pub struct Lisp {
+    scope: Vec<HashMap<String, Rc<Object>>>,
+    pub globals: Rc<RefCell<HashMap<String, Rc<Object>>>>,
+}
+
+impl Lisp {
+    pub(crate) fn new(globals: Rc<RefCell<HashMap<String, Rc<Object>>>>) -> Self {
         Self {
             scope: vec![HashMap::new()],
             globals,
@@ -36,36 +74,38 @@ impl<'a> Lisp<'a> {
         self.scope.pop();
     }
 
-    pub fn add_var(
+    pub(crate) fn add_var(
         &mut self,
         global: bool,
         name: &str,
         object: Rc<Object>,
-    ) -> Result<&mut Self, LispError> {
+    ) -> Result<(), LispError> {
         if global {
-            match self.globals.get(name) {
+            let mut globals = self.globals.borrow_mut();
+
+            match globals.get(name) {
                 Some(_) => {
                     return Err(LispError::new(
                         LispErrorKind::Eval,
                         EvalError::GlobalExists(name.to_string()),
                     ))
                 }
-                None => self.globals.insert(name.to_string(), object),
+                None => globals.insert(name.to_string(), object),
             }
         } else {
             let len = self.scope.len();
             self.scope[len - 1].insert(name.to_string(), object)
         };
 
-        Ok(self)
+        Ok(())
     }
 
-    pub fn add_func(
+    pub(crate) fn add_func(
         &mut self,
         global: bool,
         name: &str,
         func: fn(&mut Lisp, Rc<Object>) -> RustFuncResult,
-    ) -> Result<&mut Self, LispError> {
+    ) -> Result<(), LispError> {
         self.add_var(global, name, Rc::new(Object::RustFunc(func)))
     }
 
@@ -78,7 +118,7 @@ impl<'a> Lisp<'a> {
             }
 
             // Check globals
-            match self.globals.get(symbol) {
+            match self.globals.borrow_mut().get(symbol) {
                 Some(o) => Ok(o.clone()),
                 None => Err(LispError::new(
                     LispErrorKind::Eval,
@@ -100,7 +140,7 @@ impl<'a> Lisp<'a> {
         }
 
         // Check for variable in globals
-        if let Some(s) = self.globals.get_mut(symbol) {
+        if let Some(s) = self.globals.borrow_mut().get_mut(symbol) {
             *s = data;
             return Ok(());
         }
@@ -144,7 +184,7 @@ impl<'a> Lisp<'a> {
                             }
                         }
 
-                        let mut scope = Lisp::new(self.globals);
+                        let mut scope = Lisp::new(self.globals.clone());
 
                         for (i, p) in p.iter().enumerate() {
                             match args.get(i) {

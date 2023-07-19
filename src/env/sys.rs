@@ -6,17 +6,19 @@ use alloc::{
 
 use std::{fs::File, io::Read};
 
-use crate::{errors::*, lisp::Lisp, object::Object};
+use crate::{
+    errors::*,
+    lisp::{Lisp, LispBuilder},
+    object::Object,
+};
 
-impl<'a> Lisp<'a> {
-    pub fn add_sysenv(&mut self) -> Result<&mut Self, LispError> {
+impl LispBuilder {
+    pub fn add_sysenv(self) -> Result<Self, LispError> {
         // System functions
-        self.add_func(true, "include", include)?;
-        self.add_func(true, "read", read)?;
-        self.add_func(true, "exit", exit)?;
-        self.add_func(true, "print", print)?;
-
-        Ok(self)
+        self.add_func(true, "include", include)?
+            .add_func(true, "read", read)?
+            .add_func(true, "exit", exit)?
+            .add_func(true, "print", print)
     }
 }
 
@@ -139,7 +141,7 @@ fn include(lisp: &mut Lisp, arg: Rc<Object>) -> RustFuncResult {
     let objects = Object::eval(&data)?; // Evaluate tokens into objects
     let objects: Vec<Rc<Object>> = objects.into_iter().map(Rc::new).collect(); // Store objects on the heap
 
-    let mut scope = Lisp::new(lisp.globals);
+    let mut scope = Lisp::new(lisp.globals.clone());
 
     let mut ret = Rc::new(Object::Nil);
     for o in objects {

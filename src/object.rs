@@ -8,7 +8,7 @@ use alloc::{
 };
 use core::any::Any;
 
-use crate::{errors::*, Lisp};
+use crate::{errors::*, lisp::Lisp};
 
 //#[derive(Clone)]
 pub enum Object {

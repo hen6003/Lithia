@@ -6,49 +6,46 @@ use alloc::{
     vec::Vec,
 };
 
-use crate::{errors::*, lisp::Lisp, object::Object};
+use crate::{
+    errors::*,
+    lisp::{Lisp, LispBuilder},
+    object::Object,
+};
 
-impl<'a> Lisp<'a> {
-    pub fn add_stdenv(&mut self) -> Result<&mut Self, LispError> {
+impl LispBuilder {
+    pub fn add_stdenv(self) -> Result<Self, LispError> {
         // Variables
-        self.add_var(true, "t", Rc::new(Object::True))?;
-        self.add_var(true, "f", Rc::new(Object::Nil))?;
-        self.add_var(true, "pi", Rc::new(Object::Number(core::f32::consts::PI)))?;
-
-        // Functions
-        self.add_func(true, "quote", quote)?;
-        self.add_func(true, "eval", eval)?;
-        self.add_func(true, "while", lispwhile)?;
-        self.add_func(true, "if", lispif)?;
-        self.add_func(true, "func", func)?;
-
-        self.add_func(true, "car", car)?;
-        self.add_func(true, "cdr", cdr)?;
-
-        self.add_func(true, "=", set)?;
-        self.add_func(true, "def", define)?;
-        self.add_func(true, "defunc", defunc)?;
-
-        // Math functions
-        self.add_func(true, "+", add)?;
-        self.add_func(true, "-", minus)?;
-        self.add_func(true, "*", times)?;
-        self.add_func(true, "/", divide)?;
-        self.add_func(true, "%", modulus)?;
-        self.add_func(true, "==", equal)?;
-        self.add_func(true, "!=", notequal)?;
-
-        // Non-symbol names
-        self.add_func(true, "set", set)?;
-        self.add_func(true, "add", add)?;
-        self.add_func(true, "sub", minus)?;
-        self.add_func(true, "mul", times)?;
-        self.add_func(true, "div", divide)?;
-        self.add_func(true, "mod", modulus)?;
-        self.add_func(true, "eq", equal)?;
-        self.add_func(true, "ne", notequal)?;
-
-        Ok(self)
+        self.add_var(true, "t", Rc::new(Object::True))?
+            .add_var(true, "f", Rc::new(Object::Nil))?
+            .add_var(true, "pi", Rc::new(Object::Number(core::f32::consts::PI)))?
+            // Functions
+            .add_func(true, "quote", quote)?
+            .add_func(true, "eval", eval)?
+            .add_func(true, "while", lispwhile)?
+            .add_func(true, "if", lispif)?
+            .add_func(true, "func", func)?
+            .add_func(true, "car", car)?
+            .add_func(true, "cdr", cdr)?
+            .add_func(true, "=", set)?
+            .add_func(true, "def", define)?
+            .add_func(true, "defunc", defunc)?
+            // Math functions
+            .add_func(true, "+", add)?
+            .add_func(true, "-", minus)?
+            .add_func(true, "*", times)?
+            .add_func(true, "/", divide)?
+            .add_func(true, "%", modulus)?
+            .add_func(true, "==", equal)?
+            .add_func(true, "!=", notequal)?
+            // Non-symbol names
+            .add_func(true, "set", set)?
+            .add_func(true, "add", add)?
+            .add_func(true, "sub", minus)?
+            .add_func(true, "mul", times)?
+            .add_func(true, "div", divide)?
+            .add_func(true, "mod", modulus)?
+            .add_func(true, "eq", equal)?
+            .add_func(true, "ne", notequal)
     }
 }
 
