@@ -1,11 +1,18 @@
 // Defining the standard functions and variables that exist in the language
 
-use std::{fs::File, io::Read, rc::Rc};
+use alloc::{
+    rc::Rc,
+    string::{String, ToString},
+    vec::Vec,
+};
+
+#[cfg(feature = "std")]
+use std::{fs::File, io::Read};
 
 use crate::{errors::*, lisp::Lisp, object::Object};
 
 impl<'a> Lisp<'a> {
-    #[cfg(feature = "system")]
+    #[cfg(feature = "std")]
     pub fn add_sysenv(&mut self) -> Result<&mut Self, LispError> {
         // System functions
         self.add_func(true, "include", include)?;
@@ -18,9 +25,9 @@ impl<'a> Lisp<'a> {
 
     pub fn add_stdenv(&mut self) -> Result<&mut Self, LispError> {
         // Variables
-        self.add_var(true, "nil", Rc::new(Object::Nil))?;
         self.add_var(true, "t", Rc::new(Object::True))?;
-        self.add_var(true, "pi", Rc::new(Object::Number(std::f32::consts::PI)))?;
+        self.add_var(true, "f", Rc::new(Object::Nil))?;
+        self.add_var(true, "pi", Rc::new(Object::Number(core::f32::consts::PI)))?;
 
         // Functions
         self.add_func(true, "quote", quote)?;
@@ -29,9 +36,7 @@ impl<'a> Lisp<'a> {
         self.add_func(true, "if", lispif)?;
         self.add_func(true, "func", func)?;
 
-        self.add_func(true, "first", car)?;
         self.add_func(true, "car", car)?;
-        self.add_func(true, "next", cdr)?;
         self.add_func(true, "cdr", cdr)?;
 
         self.add_func(true, "=", set)?;
@@ -57,7 +62,7 @@ impl<'a> Lisp<'a> {
         self.add_func(true, "eq", equal)?;
         self.add_func(true, "ne", notequal)?;
 
-        #[cfg(feature = "system")]
+        #[cfg(feature = "std")]
         self.add_sysenv()?;
 
         Ok(self)
@@ -494,7 +499,7 @@ fn quote(_: &mut Lisp, arg: Rc<Object>) -> RustFuncResult {
 }
 
 // Exit lisp interpreter, number may be provided for exit code
-#[cfg(feature = "system")]
+#[cfg(feature = "std")]
 fn exit(lisp: &mut Lisp, arg: Rc<Object>) -> RustFuncResult {
     let exit_code = match &*arg {
         Object::Pair(a, b) => {
@@ -515,7 +520,7 @@ fn exit(lisp: &mut Lisp, arg: Rc<Object>) -> RustFuncResult {
 }
 
 // Display an object
-#[cfg(feature = "system")]
+#[cfg(feature = "std")]
 fn print(lisp: &mut Lisp, arg: Rc<Object>) -> RustFuncResult {
     let a = match &*arg {
         Object::Pair(a, b) => {
@@ -533,7 +538,7 @@ fn print(lisp: &mut Lisp, arg: Rc<Object>) -> RustFuncResult {
 }
 
 // Reads a line into objects
-#[cfg(feature = "system")]
+#[cfg(feature = "std")]
 fn read(lisp: &mut Lisp, arg: Rc<Object>) -> RustFuncResult {
     use std::io::{stdin, stdout, Write};
 
@@ -672,7 +677,7 @@ fn cdr(lisp: &mut Lisp, arg: Rc<Object>) -> RustFuncResult {
 }
 
 // Include another file, causing execution to switch to that file
-#[cfg(feature = "system")]
+#[cfg(feature = "std")]
 fn include(lisp: &mut Lisp, arg: Rc<Object>) -> RustFuncResult {
     let file = match &*arg {
         Object::Pair(a, b) => {

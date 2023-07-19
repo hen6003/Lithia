@@ -1,14 +1,12 @@
 ;; Create function that calcuates lcm
 (defunc lcm (a b)
-  ;; Set i to 1
-  (= i 1)
+        (defunc get-lcm (a b i)
+                (if (!= (% (/ (* a i) b) 1) 0)
+                  (get-lcm a b (+ i 1))
+                  (* a i)))
 
-  ;; While a * i / b != an integer, increase i
-  (while (!= (% (/ (* a i) b) 1) 0)
-    (= i (+ i 1)))
 
-  ;; Return a * i
-  (* a i))
+        (get-lcm a b 1))
 
 ;; Run lcm function and print result
-(print (lcm 43 322))
+(print (lcm 4 10))

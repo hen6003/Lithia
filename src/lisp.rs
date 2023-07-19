@@ -1,4 +1,15 @@
-use std::{collections::HashMap, rc::Rc};
+use alloc::{
+    rc::Rc,
+    string::{String, ToString},
+    vec::Vec,
+    vec
+};
+
+#[cfg(feature = "std")]
+use std::collections::HashMap;
+
+#[cfg(not(feature = "std"))]
+use hashbrown::HashMap;
 
 use crate::{errors::*, object::Object};
 
@@ -16,12 +27,12 @@ impl<'a> Lisp<'a> {
     }
 
     // New scope
-    pub fn scope_create(&mut self) {
+    pub(crate) fn scope_create(&mut self) {
         self.scope.push(HashMap::new());
     }
 
     // End scope
-    pub fn scope_end(&mut self) {
+    pub(crate) fn scope_end(&mut self) {
         self.scope.pop();
     }
 
@@ -79,7 +90,7 @@ impl<'a> Lisp<'a> {
         }
     }
 
-    pub fn set_var(&mut self, symbol: &str, data: Rc<Object>) -> Result<(), LispError> {
+    pub(crate) fn set_var(&mut self, symbol: &str, data: Rc<Object>) -> Result<(), LispError> {
         // Check for variable, going up scope if it can't find it
         for v in self.scope.iter_mut().rev() {
             if let Some(s) = v.get_mut(symbol) {
@@ -100,9 +111,7 @@ impl<'a> Lisp<'a> {
         Ok(())
     }
 
-    pub fn eval_object(&mut self, object: Rc<Object>) -> LispResult {
-        //let object_unwrapped = Rc::get_mut(&mut object).unwrap();
-
+    pub(crate) fn eval_object(&mut self, object: Rc<Object>) -> LispResult {
         match &*object {
             Object::Pair(ref f, ref a) => {
                 // Execute expression

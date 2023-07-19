@@ -1,8 +1,12 @@
 use regex::Regex;
 
-use std::any::Any;
-//use std::fmt::Debug;
-use std::rc::Rc;
+use alloc::{
+    boxed::Box,
+    rc::Rc,
+    string::{String, ToString},
+    vec::Vec,
+};
+use core::any::Any;
 
 use crate::{errors::*, Lisp};
 
@@ -272,7 +276,7 @@ impl Object {
     }
 }
 
-use std::fmt;
+use core::fmt;
 impl fmt::Display for Object {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:?}", self)

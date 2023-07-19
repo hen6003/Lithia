@@ -1,4 +1,10 @@
-use std::{error::Error, fmt, rc::Rc};
+use alloc::{boxed::Box, string::String, rc::Rc};
+
+#[cfg(feature = "std")]
+use std::{error::Error, fmt};
+
+#[cfg(not(feature = "std"))]
+use core::{error::Error, fmt};
 
 use crate::object::Object;
 

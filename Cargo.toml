@@ -12,12 +12,14 @@ exclude = [
 ]
 
 [features]
-default = ["system"]
-system = []
+default = ["std"]
+std = []
 
 [dependencies]
-regex = "1.5.6"
+regex = "1.9.1"
+hashbrown = "0.14"
 
 [[bin]]
 name = "lithia"
 path = "src/bin/main.rs"
+required-features = ["std"]
