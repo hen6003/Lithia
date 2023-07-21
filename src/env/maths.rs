@@ -25,7 +25,7 @@ fn sqrt(lisp: &mut Lisp, arg: Rc<Object>) -> RustFuncResult {
             };
 
             match **b {
-                Object::Nil => value.map(|v| Rc::new(Object::Number(v))),
+                Object::Nil => value.map(|v| Rc::new(Object::Number(v.sqrt()))),
                 _ => Err(RustFuncError::InvalidArguments(ArgumentsError::TooMany)),
             }
         }

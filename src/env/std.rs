@@ -26,6 +26,7 @@ impl LispBuilder {
             .add_func("func", func)?
             .add_func("car", car)?
             .add_func("cdr", cdr)?
+            .add_func("cons", cons)?
             .add_func("=", set)?
             .add_func("def", define)?
             .add_func("defunc", defunc)?
@@ -47,6 +48,36 @@ impl LispBuilder {
             .add_func("==", equal)?
             .add_func("!=", notequal)
     }
+}
+
+fn cons(lisp: &mut Lisp, arg: Rc<Object>) -> RustFuncResult {
+    let first;
+    let second;
+
+    match &*arg {
+        Object::Pair(a, b) => {
+            first = lisp.eval_object(Rc::clone(a))?;
+
+            match &**b {
+                Object::Pair(a, b) => {
+                    second = lisp.eval_object(Rc::clone(a))?;
+
+                    match &**b {
+                        Object::Nil => (),
+                        _ => return Err(RustFuncError::new_args_error(ArgumentsError::NotEnough)),
+                    }
+                }
+                Object::Nil => {
+                    return Err(RustFuncError::new_args_error(ArgumentsError::NotEnough))
+                }
+                _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
+            }
+        }
+        Object::Nil => return Err(RustFuncError::new_args_error(ArgumentsError::NotEnough)),
+        _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
+    };
+
+    Ok(Rc::new(Object::Pair(first, second)))
 }
 
 fn modulus(lisp: &mut Lisp, arg: Rc<Object>) -> RustFuncResult {

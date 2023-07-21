@@ -18,7 +18,8 @@ impl LispBuilder {
         self.add_func("include", include)?
             .add_func("read", read)?
             .add_func("exit", exit)?
-            .add_func("print", print)
+            .add_func("print", print)?
+            .add_func("print-raw", print_raw)
     }
 }
 
@@ -55,6 +56,23 @@ fn print(lisp: &mut Lisp, arg: Rc<Object>) -> RustFuncResult {
     };
 
     println!("{}", a);
+
+    Ok(Rc::new(Object::Nil))
+}
+
+// Display an objects raw internals
+fn print_raw(lisp: &mut Lisp, arg: Rc<Object>) -> RustFuncResult {
+    let a = match &*arg {
+        Object::Pair(a, b) => {
+            if **b != Object::Nil {
+                return Err(RustFuncError::new_args_error(ArgumentsError::TooMany));
+            }
+            lisp.eval_object(Rc::clone(a))?
+        }
+        _ => return Err(RustFuncError::new_args_error(ArgumentsError::DottedPair)),
+    };
+
+    println!("{:?}", a);
 
     Ok(Rc::new(Object::Nil))
 }

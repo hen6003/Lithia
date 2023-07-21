@@ -10,7 +10,7 @@ use core::any::Any;
 
 use crate::{errors::*, lisp::Lisp};
 
-//#[derive(Clone)]
+#[derive(Debug)]
 pub enum Object {
     Nil,
     True,
@@ -279,12 +279,6 @@ impl Object {
 use core::fmt;
 impl fmt::Display for Object {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
-impl fmt::Debug for Object {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Pair(a, b) => {
                 let mut string = true;
@@ -306,7 +300,7 @@ impl fmt::Debug for Object {
                         Self::Nil => break,
                         c => {
                             return if objects.is_empty() {
-                                write!(f, "({:?} . {:?})", a, b)
+                                write!(f, "({} . {})", a, b)
                             } else {
                                 write!(f, "(")?;
 
